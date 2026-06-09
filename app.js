@@ -6,6 +6,11 @@ let page = new URLSearchParams(location.search).get("screen") || document.body.d
 const configured = SUPABASE_URL.startsWith("http") && SUPABASE_ANON_KEY.length > 30;
 const client = configured ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 const sessionKey = "bolao_participant";
+const bettingCutoffMs = 60 * 60 * 1000;
+let draftPredictions = new Map();
+let currentParticipant = null;
+let currentMatches = [];
+let currentPredictions = [];
 const teamTranslations = {
   Mexico: "México",
   "South Africa": "África do Sul",
@@ -81,14 +86,18 @@ function mountAppShell() {
             <h1>Meus palpites</h1>
             <p>Escolha quem vence ou marque empate antes do jogo comecar.</p>
           </div>
-          <select id="stage-filter" aria-label="Filtrar fase">
-            <option value="all">Todos os jogos</option>
-          </select>
+          <button id="save-predictions" class="primary" type="button">Salvar palpites</button>
         </div>
+        <div id="phase-tabs" class="phase-tabs" aria-label="Filtrar fase"></div>
+        <p id="prediction-message" class="message" aria-live="polite"></p>
         <div id="matches" class="matches"></div>
       </section>
 
       <aside class="side">
+        <section class="panel">
+          <h2>Meu perfil</h2>
+          <div id="profile-card" class="profile-card"></div>
+        </section>
         <section class="panel">
           <div class="section-head tight">
             <h2>Ranking</h2>
@@ -135,6 +144,10 @@ function mountAdminShell() {
       </section>
 
       <aside class="side">
+        <section class="panel">
+          <h2>Participantes</h2>
+          <div id="participants-list" class="participants-list"></div>
+        </section>
         <section class="panel">
           <h2>Importar jogos</h2>
           <p class="muted">Cole CSV com: match_no,phase,stage,kickoff_at,home_team,away_team,venue.</p>
@@ -196,6 +209,18 @@ function fmtDate(value) {
 
 function outcomeFor(match) {
   return match.result_pick || null;
+}
+
+function isBettingClosed(match) {
+  if (!match) return true;
+  if (match.status !== "scheduled") return true;
+  if (!match.kickoff_at) return false;
+  return new Date(match.kickoff_at).getTime() - Date.now() <= bettingCutoffMs;
+}
+
+function cutoffLabel(match) {
+  if (!match.kickoff_at) return "A definir";
+  return fmtDate(new Date(new Date(match.kickoff_at).getTime() - bettingCutoffMs).toISOString());
 }
 
 function pickLabel(match, pick) {
@@ -338,6 +363,7 @@ function initAuth() {
 async function loadApp() {
   const participant = await requireParticipant();
   if (!participant) return;
+  currentParticipant = participant;
   initSignout();
 
   $("#user-name").textContent = participant.name;
@@ -353,24 +379,51 @@ async function loadApp() {
     return;
   }
 
-  renderStageFilter(matches || []);
-  renderMatches(matches || [], predictions || [], participant.id);
+  draftPredictions = new Map();
+  currentMatches = matches || [];
+  currentPredictions = predictions || [];
+  renderProfile(participant, currentMatches, currentPredictions);
+  renderStageTabs(currentMatches);
+  renderMatches(currentMatches, currentPredictions, participant.id);
+  initSavePredictions();
   await renderRanking();
-  renderHistory(matches || [], predictions || []);
+  renderHistory(currentMatches, currentPredictions);
 }
 
-function renderStageFilter(matches) {
-  const filter = $("#stage-filter");
-  const stages = [...new Set(matches.map(phaseFor))].sort((a, b) => phaseOrder.indexOf(a) - phaseOrder.indexOf(b));
-  stages.forEach((stage) => {
-    const option = document.createElement("option");
-    option.value = stage;
-    option.textContent = stage;
-    filter.appendChild(option);
+function renderProfile(participant, matches, predictions) {
+  const root = $("#profile-card");
+  if (!root) return;
+  const completed = matches.filter((match) => match.status === "completed").length;
+  const points = predictions.filter((prediction) => {
+    const match = matches.find((item) => item.id === prediction.match_id);
+    return match && outcomeFor(match) === prediction.pick;
+  }).length;
+  root.innerHTML = `
+    <strong>${participant.name}</strong>
+    <span>${participant.email}</span>
+    <span>${predictions.length} palpites salvos</span>
+    <span>${points} pontos em ${completed} jogos finalizados</span>
+  `;
+}
+
+function renderStageTabs(matches) {
+  const root = $("#phase-tabs");
+  if (!root) return;
+  const stages = ["Todos", ...new Set(matches.map(phaseFor))].sort((a, b) => {
+    if (a === "Todos") return -1;
+    if (b === "Todos") return 1;
+    return phaseOrder.indexOf(a) - phaseOrder.indexOf(b);
   });
-  filter.addEventListener("change", () => {
+  root.innerHTML = stages.map((stage, index) => `
+    <button class="phase-tab ${index === 0 ? "active" : ""}" type="button" data-phase="${stage}">${stage}</button>
+  `).join("");
+  root.querySelectorAll("[data-phase]").forEach((button) => {
+    button.addEventListener("click", () => {
+      root.querySelectorAll(".phase-tab").forEach((item) => item.classList.toggle("active", item === button));
+      const phase = button.dataset.phase;
     document.querySelectorAll("[data-stage]").forEach((card) => {
-      card.classList.toggle("hidden", filter.value !== "all" && card.dataset.stage !== filter.value);
+        card.classList.toggle("hidden", phase !== "Todos" && card.dataset.stage !== phase);
+    });
     });
   });
 }
@@ -404,13 +457,15 @@ function renderMatches(matches, predictions, participantId) {
 
       phaseMatches.forEach((match) => {
     const selected = byMatch.get(match.id);
-    const locked = match.status !== "scheduled" || (match.kickoff_at && new Date(match.kickoff_at) <= new Date());
+    const draft = draftPredictions.get(match.id);
+    const locked = Boolean(selected) || isBettingClosed(match);
     const card = document.createElement("article");
     card.className = "match-card";
     card.innerHTML = `
       <div class="match-meta">
         <span>${match.stage || "Copa"}</span>
         <span>${fmtDate(match.kickoff_at)}</span>
+        <span>Fecha: ${cutoffLabel(match)}</span>
         <span>${match.venue || ""}</span>
       </div>
       <div class="teams">
@@ -420,28 +475,20 @@ function renderMatches(matches, predictions, participantId) {
       </div>
       <div class="picks">
         ${["HOME", "DRAW", "AWAY"].map((pick) => `
-          <button class="pick ${selected === pick ? "selected" : ""}" type="button" data-pick="${pick}" ${locked ? "disabled" : ""}>
+          <button class="pick ${(draft || selected) === pick ? "selected" : ""}" type="button" data-pick="${pick}" ${locked ? "disabled" : ""}>
             ${pickLabel(match, pick)}
           </button>
         `).join("")}
       </div>
+      ${selected ? `<p class="saved-note">Palpite salvo. Nao pode ser alterado.</p>` : ""}
+      ${!selected && isBettingClosed(match) ? `<p class="saved-note">Palpites encerrados.</p>` : ""}
     `;
     card.querySelectorAll("[data-pick]").forEach((button) => {
-      button.addEventListener("click", async () => {
-        const { error } = await client.from("predictions").upsert({
-          participant_id: participantId,
-          match_id: match.id,
-          pick: button.dataset.pick,
-        }, { onConflict: "participant_id,match_id" });
-
-        if (error) {
-          alert(`Nao consegui salvar o palpite: ${friendlyDbError(error)}`);
-          return;
-        }
-
+      button.addEventListener("click", () => {
+        draftPredictions.set(match.id, button.dataset.pick);
         card.querySelectorAll(".pick").forEach((item) => item.classList.remove("selected"));
         button.classList.add("selected");
-        await renderRanking();
+        setMessage("#prediction-message", `${draftPredictions.size} palpite(s) aguardando salvar.`);
       });
     });
         list.appendChild(card);
@@ -450,6 +497,41 @@ function renderMatches(matches, predictions, participantId) {
       section.appendChild(list);
       root.appendChild(section);
   });
+}
+
+function initSavePredictions() {
+  const button = $("#save-predictions");
+  if (!button || button.dataset.ready) return;
+  button.dataset.ready = "true";
+  button.addEventListener("click", saveDraftPredictions);
+}
+
+async function saveDraftPredictions() {
+  if (!currentParticipant) return;
+  const existing = new Set(currentPredictions.map((item) => item.match_id));
+  const matchById = new Map(currentMatches.map((match) => [match.id, match]));
+  const records = [...draftPredictions.entries()]
+    .filter(([matchId]) => !existing.has(matchId))
+    .filter(([matchId]) => !isBettingClosed(matchById.get(matchId)))
+    .map(([matchId, pick]) => ({
+      participant_id: currentParticipant.id,
+      match_id: matchId,
+      pick,
+    }));
+
+  if (!records.length) {
+    setMessage("#prediction-message", "Nenhum palpite novo para salvar.", "error");
+    return;
+  }
+
+  const { error } = await client.from("predictions").insert(records);
+  if (error) {
+    setMessage("#prediction-message", `Nao consegui salvar: ${friendlyDbError(error)}`, "error");
+    return;
+  }
+
+  setMessage("#prediction-message", `${records.length} palpite(s) salvo(s).`, "success");
+  setTimeout(() => location.href = pageUrl("app"), 550);
 }
 
 async function renderRanking() {
@@ -467,7 +549,7 @@ async function renderRanking() {
     return { ...participant, score };
   }).sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
 
-  root.innerHTML = rows.map((row, index) => `
+  root.innerHTML = rows.slice(0, 5).map((row, index) => `
     <div class="rank-row">
       <span>${index + 1}</span>
       <strong>${row.name}</strong>
@@ -516,7 +598,37 @@ async function loadAdmin() {
   }
 
   await renderAdminMatches();
+  await renderParticipants();
   $("#import-csv").addEventListener("click", importCsv);
+}
+
+async function renderParticipants() {
+  const root = $("#participants-list");
+  if (!root) return;
+  const [{ data: participants, error: participantsError }, { data: predictions }, { data: matches }] = await Promise.all([
+    client.from("participants").select("*").order("created_at", { ascending: true }),
+    client.from("predictions").select("participant_id,match_id,pick"),
+    client.from("matches").select("id,result_pick,status"),
+  ]);
+
+  if (participantsError) {
+    root.innerHTML = `<p class="message error">${friendlyDbError(participantsError)}</p>`;
+    return;
+  }
+
+  const finished = new Map((matches || []).filter((match) => match.status === "completed").map((match) => [match.id, outcomeFor(match)]));
+  root.innerHTML = (participants || []).map((participant) => {
+    const userPredictions = (predictions || []).filter((prediction) => prediction.participant_id === participant.id);
+    const points = userPredictions.filter((prediction) => finished.get(prediction.match_id) === prediction.pick).length;
+    return `
+      <div class="participant-row">
+        <strong>${participant.name}</strong>
+        <span>${participant.email}</span>
+        <b>${points} pts</b>
+        <small>${userPredictions.length} palpites</small>
+      </div>
+    `;
+  }).join("");
 }
 
 async function renderAdminMatches() {

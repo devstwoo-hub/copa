@@ -275,6 +275,30 @@ p {
   margin-bottom: 0;
 }
 
+.phase-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.phase-tab {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  font-weight: 800;
+  padding: 8px 12px;
+}
+
+.phase-tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
 .match-card {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -330,6 +354,11 @@ p {
 .pick:disabled {
   cursor: not-allowed;
   opacity: .62;
+}
+
+.saved-note {
+  margin: 10px 0 0;
+  font-size: 13px;
 }
 
 .ranking {
@@ -397,6 +426,35 @@ p {
 }
 
 .history-row b {
+  color: var(--accent);
+}
+
+.profile-card, .participants-list {
+  display: grid;
+  gap: 8px;
+}
+
+.profile-card span {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.participant-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.participant-row span,
+.participant-row small {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.participant-row b {
   color: var(--accent);
 }
 

@@ -88,7 +88,7 @@ with check (
     select 1 from public.matches
     where matches.id = match_id
       and matches.status = 'scheduled'
-      and (matches.kickoff_at is null or matches.kickoff_at > now())
+      and (matches.kickoff_at is null or matches.kickoff_at > now() + interval '1 hour')
   )
 );
 
@@ -96,15 +96,8 @@ drop policy if exists "predictions_update_anon" on public.predictions;
 create policy "predictions_update_anon"
 on public.predictions for update
 to anon
-using (true)
-with check (
-  exists (
-    select 1 from public.matches
-    where matches.id = match_id
-      and matches.status = 'scheduled'
-      and (matches.kickoff_at is null or matches.kickoff_at > now())
-  )
-);
+using (false)
+with check (false);
 
 grant usage on schema public to anon, authenticated;
 grant select, insert, update on public.participants to anon, authenticated;
