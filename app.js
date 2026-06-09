@@ -2,7 +2,7 @@ const SUPABASE_URL = "https://zlqsmhlutktkeggqnaox.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpscXNtaGx1dGt0a2VnZ3FuYW94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDEyNTQsImV4cCI6MjA5NjU3NzI1NH0.T2Wnrp3tZvZaUDaETYLslidWb2i3leaa-Ioj8SJXg-c";
 const ADMIN_CODE = "admin2026";
 
-const page = document.body.dataset.page;
+let page = new URLSearchParams(location.search).get("screen") || document.body.dataset.page;
 const configured = SUPABASE_URL.startsWith("http") && SUPABASE_ANON_KEY.length > 30;
 const client = configured ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 const sessionKey = "bolao_participant";
@@ -56,9 +56,95 @@ const teamTranslations = {
 const $ = (selector) => document.querySelector(selector);
 
 function pageUrl(pageName) {
-  const isLocal = location.hostname === "127.0.0.1" || location.hostname === "localhost";
-  if (pageName === "index") return isLocal ? "./index.html" : "/";
-  return isLocal ? `./${pageName}.html` : `/${pageName}`;
+  if (pageName === "index") return location.hostname === "127.0.0.1" || location.hostname === "localhost" ? "./index.html" : "/";
+  return `${pageUrl("index")}?screen=${pageName}`;
+}
+
+function mountAppShell() {
+  document.body.dataset.page = "app";
+  document.body.innerHTML = `
+    <header class="topbar">
+      <a class="brand compact" href="${pageUrl("app")}">
+        <span class="brand-mark">B</span>
+        <strong>Bolao da Copa</strong>
+      </a>
+      <nav class="nav-actions">
+        <a id="admin-link" class="ghost hidden" href="${pageUrl("admin")}">Admin</a>
+        <button id="signout" class="ghost" type="button">Sair</button>
+      </nav>
+    </header>
+
+    <main class="layout">
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <h1>Meus palpites</h1>
+            <p>Escolha quem vence ou marque empate antes do jogo comecar.</p>
+          </div>
+          <select id="stage-filter" aria-label="Filtrar fase">
+            <option value="all">Todos os jogos</option>
+          </select>
+        </div>
+        <div id="matches" class="matches"></div>
+      </section>
+
+      <aside class="side">
+        <section class="panel">
+          <div class="section-head tight">
+            <h2>Ranking</h2>
+            <span id="user-name" class="pill"></span>
+          </div>
+          <div id="ranking" class="ranking"></div>
+        </section>
+        <section class="panel small-copy">
+          <h2>Regra</h2>
+          <p>Acertou o vencedor ou empate, ganha 1 ponto. Errou, 0 ponto.</p>
+        </section>
+        <section class="panel">
+          <h2>Meu histórico</h2>
+          <div id="history" class="history"></div>
+        </section>
+      </aside>
+    </main>
+  `;
+}
+
+function mountAdminShell() {
+  document.body.dataset.page = "admin";
+  document.body.innerHTML = `
+    <header class="topbar">
+      <a class="brand compact" href="${pageUrl("app")}">
+        <span class="brand-mark">B</span>
+        <strong>Bolao da Copa</strong>
+      </a>
+      <nav class="nav-actions">
+        <a class="ghost" href="${pageUrl("app")}">Palpites</a>
+        <button id="signout" class="ghost" type="button">Sair</button>
+      </nav>
+    </header>
+
+    <main class="layout admin-layout">
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <h1>Resultados</h1>
+            <p>Escolha o resultado final de cada jogo para liberar a pontuacao no ranking.</p>
+          </div>
+        </div>
+        <div id="admin-matches" class="admin-list"></div>
+      </section>
+
+      <aside class="side">
+        <section class="panel">
+          <h2>Importar jogos</h2>
+          <p class="muted">Cole CSV com: match_no,phase,stage,kickoff_at,home_team,away_team,venue.</p>
+          <textarea id="csv-input" rows="10" placeholder="1,Primeira fase,Grupo A,2026-06-11T20:00:00Z,Mexico,Africa do Sul,Estadio Azteca"></textarea>
+          <button id="import-csv" class="primary" type="button">Importar CSV</button>
+          <p id="admin-message" class="message" aria-live="polite"></p>
+        </section>
+      </aside>
+    </main>
+  `;
 }
 
 function setMessage(selector, text, type = "") {
@@ -521,6 +607,9 @@ async function importCsv() {
   setMessage("#admin-message", `${records.length} jogos importados.`, "success");
   await renderAdminMatches();
 }
+
+if (page === "app" && document.body.dataset.page !== "app") mountAppShell();
+if (page === "admin" && document.body.dataset.page !== "admin") mountAdminShell();
 
 if (page === "auth") initAuth();
 if (page === "app") loadApp();
