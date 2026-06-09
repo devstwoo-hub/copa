@@ -237,6 +237,13 @@ function displayTeam(team) {
 }
 
 function phaseFor(match) {
+  const matchNo = Number(match?.match_no);
+  if (matchNo > 0 && matchNo <= 72) return "Primeira fase";
+  if (matchNo >= 73 && matchNo <= 88) return "16 avos";
+  if (matchNo >= 89 && matchNo <= 96) return "Oitavas";
+  if (matchNo >= 97 && matchNo <= 100) return "Quartas";
+  if (matchNo >= 101 && matchNo <= 102) return "Semifinal";
+  if (matchNo >= 103) return "Final";
   return normalizePhase(match.phase || match.stage);
 }
 
