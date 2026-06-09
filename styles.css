@@ -342,6 +342,28 @@ p {
   background: #fff;
 }
 
+.brazil-match {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(15, 123, 92, .34);
+  background:
+    linear-gradient(110deg, rgba(15, 123, 92, .10), rgba(255, 214, 10, .16) 58%, rgba(255, 255, 255, .96) 59%),
+    #fff;
+}
+
+.brazil-match::before {
+  content: "BR";
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  border-radius: 999px;
+  background: #0f7b5c;
+  color: #ffd60a;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 3px 7px;
+}
+
 .match-meta {
   display: flex;
   flex-wrap: wrap;
@@ -619,9 +641,46 @@ p {
   padding: 18px;
 }
 
+.full-button {
+  width: 100%;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.compact-tabs {
+  margin-top: 4px;
+}
+
+.knockout-editor {
+  display: grid;
+  gap: 8px;
+  max-height: 420px;
+  overflow: auto;
+}
+
+.knockout-row {
+  display: grid;
+  grid-template-columns: auto auto 1fr 1fr auto;
+  gap: 6px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.knockout-row span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.knockout-row input {
+  min-height: 36px;
+}
+
 @media (max-width: 880px) {
   .vote-summary,
-  .full-ranking .rank-row {
+  .full-ranking .rank-row,
+  .knockout-row {
     grid-template-columns: 1fr;
   }
 }

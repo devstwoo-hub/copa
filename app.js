@@ -145,6 +145,7 @@ function mountParticipantShell() {
             <p id="participant-summary">Histórico de palpites e pontuação.</p>
           </div>
         </div>
+        <div id="participant-history-tabs" class="phase-tabs compact-tabs"></div>
         <div id="participant-history" class="history large-history"></div>
       </section>
     </main>
@@ -179,7 +180,13 @@ function mountAdminShell() {
       <aside class="side">
         <section class="panel">
           <h2>Participantes</h2>
+          <button id="export-ranking" class="ghost full-button" type="button">Exportar ranking CSV</button>
           <div id="participants-list" class="participants-list"></div>
+        </section>
+        <section class="panel">
+          <h2>Fases finais</h2>
+          <p class="muted">Atualize os confrontos conforme os classificados forem definidos.</p>
+          <div id="knockout-editor" class="knockout-editor"></div>
         </section>
         <section class="panel">
           <h2>Importar jogos</h2>
@@ -267,6 +274,10 @@ function displayTeam(team) {
     .replaceAll("1Âº", "1º")
     .replaceAll("2Âº", "2º")
     .replaceAll("3Âº", "3º");
+}
+
+function isBrazilMatch(match) {
+  return [match?.home_team, match?.away_team].some((team) => displayTeam(team).toLowerCase().includes("brasil"));
 }
 
 function phaseFor(match) {
@@ -512,7 +523,7 @@ function renderMatches(matches, predictions, participantId) {
     const draft = draftPredictions.get(match.id);
     const locked = Boolean(selected) || isBettingClosed(match);
     const card = document.createElement("article");
-    card.className = "match-card";
+    card.className = `match-card ${isBrazilMatch(match) ? "brazil-match" : ""}`;
     card.innerHTML = `
       <div class="match-meta">
         <span>${match.stage || "Copa"}</span>
@@ -673,7 +684,62 @@ async function loadAdmin() {
 
   await renderAdminMatches();
   await renderParticipants();
+  await renderKnockoutEditor();
+  $("#export-ranking")?.addEventListener("click", exportRankingCsv);
   $("#import-csv").addEventListener("click", importCsv);
+}
+
+async function exportRankingCsv() {
+  const rows = await getRankingRows();
+  const csv = [
+    ["posicao", "nome", "email", "pontos", "palpites"],
+    ...rows.map((row, index) => [index + 1, row.name, row.email || "", row.score, row.total]),
+  ].map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "ranking-bolao.csv";
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+async function renderKnockoutEditor() {
+  const root = $("#knockout-editor");
+  if (!root) return;
+  const { data: matches, error } = await client
+    .from("matches")
+    .select("*")
+    .gte("match_no", 73)
+    .order("match_no", { ascending: true });
+
+  if (error) {
+    root.innerHTML = `<p class="message error">${friendlyDbError(error)}</p>`;
+    return;
+  }
+
+  root.innerHTML = (matches || []).map((match) => `
+    <form class="knockout-row" data-match-id="${match.id}">
+      <strong>Jogo ${match.match_no}</strong>
+      <span>${phaseFor(match)}</span>
+      <input name="home_team" type="text" value="${displayTeam(match.home_team)}" aria-label="Time A">
+      <input name="away_team" type="text" value="${displayTeam(match.away_team)}" aria-label="Time B">
+      <button class="ghost" type="submit">Salvar</button>
+    </form>
+  `).join("");
+
+  root.querySelectorAll("form").forEach((form) => {
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const data = new FormData(form);
+      const { error } = await client.from("matches").update({
+        home_team: String(data.get("home_team") || "").trim(),
+        away_team: String(data.get("away_team") || "").trim(),
+      }).eq("id", form.dataset.matchId);
+      setMessage("#admin-message", error ? friendlyDbError(error) : "Confronto atualizado.", error ? "error" : "success");
+      if (!error) await renderAdminMatches();
+    });
+  });
 }
 
 async function loadParticipantPage() {
@@ -700,15 +766,52 @@ async function loadParticipantPage() {
 
   $("#participant-title").textContent = participant.name;
   $("#participant-summary").textContent = `${participant.email} · ${predictions?.length || 0} palpites · ${points} pontos`;
-  renderParticipantHistory(matches || [], predictions || [], "#participant-history");
+  renderParticipantHistoryFilters(matches || [], predictions || []);
+  renderParticipantHistory(matches || [], predictions || [], "#participant-history", "salvos");
 }
 
-function renderParticipantHistory(matches, predictions, selector) {
+function renderParticipantHistoryFilters(matches, predictions) {
+  const root = $("#participant-history-tabs");
+  if (!root) return;
+  const filters = [
+    ["salvos", "Salvos"],
+    ["acertos", "Acertos"],
+    ["erros", "Erros"],
+    ["pendentes", "Pendentes"],
+  ];
+  const counts = Object.fromEntries(filters.map(([key]) => [key, historyRows(matches, predictions, key).length]));
+  root.innerHTML = filters.map(([key, label], index) => `
+    <button class="phase-tab ${index === 0 ? "active" : ""}" type="button" data-history-filter="${key}">
+      <span>${label}</span>
+      <small>${counts[key]}</small>
+    </button>
+  `).join("");
+  root.querySelectorAll("[data-history-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      root.querySelectorAll(".phase-tab").forEach((item) => item.classList.toggle("active", item === button));
+      renderParticipantHistory(matches, predictions, "#participant-history", button.dataset.historyFilter);
+    });
+  });
+}
+
+function historyRows(matches, predictions, filter = "salvos") {
+  const byMatch = new Map(predictions.map((item) => [item.match_id, item.pick]));
+  return matches.filter((match) => {
+    const pick = byMatch.get(match.id);
+    const result = outcomeFor(match);
+    if (filter === "salvos") return Boolean(pick);
+    if (filter === "acertos") return Boolean(pick && result && pick === result);
+    if (filter === "erros") return Boolean(pick && result && pick !== result);
+    if (filter === "pendentes") return Boolean(pick && !result);
+    return Boolean(pick);
+  });
+}
+
+function renderParticipantHistory(matches, predictions, selector, filter = "salvos") {
   const root = $(selector);
   if (!root) return;
   const byMatch = new Map(predictions.map((item) => [item.match_id, item.pick]));
-  const rows = matches
-    .filter((match) => byMatch.has(match.id) || match.status === "completed")
+  const rows = historyRows(matches, predictions, filter)
     .map((match) => {
       const pick = byMatch.get(match.id);
       const result = outcomeFor(match);
@@ -723,7 +826,7 @@ function renderParticipantHistory(matches, predictions, selector) {
         </div>
       `;
     });
-  root.innerHTML = rows.length ? rows.join("") : `<p class="muted">Nenhum palpite salvo ainda.</p>`;
+  root.innerHTML = rows.length ? rows.join("") : `<p class="muted">Nenhum item nesta lista.</p>`;
 }
 
 async function renderParticipants() {
