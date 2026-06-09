@@ -65,6 +65,10 @@ function pageUrl(pageName) {
   return `${pageUrl("index")}?screen=${pageName}`;
 }
 
+function participantUrl(id) {
+  return `${pageUrl("index")}?screen=participant&id=${encodeURIComponent(id)}`;
+}
+
 function mountAppShell() {
   document.body.dataset.page = "app";
   document.body.innerHTML = `
@@ -104,6 +108,7 @@ function mountAppShell() {
             <span id="user-name" class="pill"></span>
           </div>
           <div id="ranking" class="ranking"></div>
+          <button id="open-ranking" class="link-button block-action" type="button">Ver ranking completo</button>
         </section>
         <section class="panel small-copy">
           <h2>Regra</h2>
@@ -114,6 +119,34 @@ function mountAppShell() {
           <div id="history" class="history"></div>
         </section>
       </aside>
+    </main>
+  `;
+}
+
+function mountParticipantShell() {
+  document.body.dataset.page = "participant";
+  document.body.innerHTML = `
+    <header class="topbar">
+      <a class="brand compact" href="${pageUrl("app")}">
+        <span class="brand-mark">B</span>
+        <strong>Bolao da Copa</strong>
+      </a>
+      <nav class="nav-actions">
+        <a class="ghost" href="${pageUrl("app")}">Palpites</a>
+        <button id="signout" class="ghost" type="button">Sair</button>
+      </nav>
+    </header>
+
+    <main class="layout single-layout">
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <h1 id="participant-title">Participante</h1>
+            <p id="participant-summary">Histórico de palpites e pontuação.</p>
+          </div>
+        </div>
+        <div id="participant-history" class="history large-history"></div>
+      </section>
     </main>
   `;
 }
@@ -523,6 +556,12 @@ function initSavePredictions() {
   if (!button || button.dataset.ready) return;
   button.dataset.ready = "true";
   button.addEventListener("click", saveDraftPredictions);
+
+  const rankingButton = $("#open-ranking");
+  if (rankingButton && !rankingButton.dataset.ready) {
+    rankingButton.dataset.ready = "true";
+    rankingButton.addEventListener("click", showFullRanking);
+  }
 }
 
 async function saveDraftPredictions() {
@@ -556,48 +595,64 @@ async function saveDraftPredictions() {
 async function renderRanking() {
   const root = $("#ranking");
   if (!root) return;
+  const rows = await getRankingRows();
+
+  root.innerHTML = rows.slice(0, 5).map((row, index) => `
+    <a class="rank-row" href="${participantUrl(row.id)}">
+      <span>${index + 1}</span>
+      <strong>${row.name}</strong>
+      <span class="score">${row.score} pts</span>
+    </a>
+  `).join("");
+}
+
+async function getRankingRows() {
   const [{ data: participants }, { data: predictions }, { data: matches }] = await Promise.all([
-    client.from("participants").select("id,name"),
+    client.from("participants").select("id,name,email"),
     client.from("predictions").select("participant_id,match_id,pick"),
     client.from("matches").select("id,result_pick,status"),
   ]);
 
   const finished = new Map((matches || []).filter((match) => match.status === "completed").map((match) => [match.id, outcomeFor(match)]));
-  const rows = (participants || []).map((participant) => {
+  return (participants || []).map((participant) => {
     const score = (predictions || []).filter((prediction) => prediction.participant_id === participant.id && finished.get(prediction.match_id) === prediction.pick).length;
-    return { ...participant, score };
+    const total = (predictions || []).filter((prediction) => prediction.participant_id === participant.id).length;
+    return { ...participant, score, total };
   }).sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+}
 
-  root.innerHTML = rows.slice(0, 5).map((row, index) => `
-    <div class="rank-row">
-      <span>${index + 1}</span>
-      <strong>${row.name}</strong>
-      <span class="score">${row.score} pts</span>
-    </div>
-  `).join("");
+async function showFullRanking() {
+  const rows = await getRankingRows();
+  const modal = document.createElement("div");
+  modal.id = "modal-root";
+  modal.className = "modal-backdrop";
+  modal.innerHTML = `
+    <section class="modal">
+      <div class="section-head tight">
+        <h2>Ranking completo</h2>
+        <button class="ghost" type="button" data-close-modal>Fechar</button>
+      </div>
+      <div class="ranking full-ranking">
+        ${rows.map((row, index) => `
+          <a class="rank-row" href="${participantUrl(row.id)}">
+            <span>${index + 1}</span>
+            <strong>${row.name}</strong>
+            <small>${row.total} palpites</small>
+            <span class="score">${row.score} pts</span>
+          </a>
+        `).join("")}
+      </div>
+    </section>
+  `;
+  document.body.appendChild(modal);
+  modal.querySelector("[data-close-modal]").addEventListener("click", () => modal.remove());
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) modal.remove();
+  });
 }
 
 function renderHistory(matches, predictions) {
-  const root = $("#history");
-  if (!root) return;
-  const byMatch = new Map(predictions.map((item) => [item.match_id, item.pick]));
-  const rows = matches
-    .filter((match) => byMatch.has(match.id) || match.status === "completed")
-    .map((match) => {
-      const pick = byMatch.get(match.id);
-      const result = outcomeFor(match);
-      const point = result && pick === result ? 1 : 0;
-          return `
-        <div class="history-row">
-          <strong>${displayTeam(match.home_team)} x ${displayTeam(match.away_team)}</strong>
-          <span>Palpite: ${pick ? pickLabel(match, pick) : "Sem palpite"}</span>
-          <span>Resultado: ${result ? pickLabel(match, result) : "Pendente"}</span>
-          <b>${result ? `${point} pt` : "-"}</b>
-        </div>
-      `;
-    });
-
-  root.innerHTML = rows.length ? rows.join("") : `<p class="muted">Seus palpites salvos aparecem aqui.</p>`;
+  renderParticipantHistory(matches, predictions, "#history");
 }
 
 async function loadAdmin() {
@@ -621,6 +676,56 @@ async function loadAdmin() {
   $("#import-csv").addEventListener("click", importCsv);
 }
 
+async function loadParticipantPage() {
+  const viewer = await requireParticipant();
+  if (!viewer) return;
+  initSignout();
+
+  const participantId = new URLSearchParams(location.search).get("id") || viewer.id;
+  const [{ data: participant, error: participantError }, { data: matches }, { data: predictions }] = await Promise.all([
+    client.from("participants").select("*").eq("id", participantId).single(),
+    client.from("matches").select("*").order("match_no", { ascending: true }),
+    client.from("predictions").select("*").eq("participant_id", participantId),
+  ]);
+
+  if (participantError || !participant) {
+    $("#participant-history").innerHTML = `<p class="message error">${friendlyDbError(participantError)}</p>`;
+    return;
+  }
+
+  const points = (predictions || []).filter((prediction) => {
+    const match = (matches || []).find((item) => item.id === prediction.match_id);
+    return match && outcomeFor(match) === prediction.pick;
+  }).length;
+
+  $("#participant-title").textContent = participant.name;
+  $("#participant-summary").textContent = `${participant.email} · ${predictions?.length || 0} palpites · ${points} pontos`;
+  renderParticipantHistory(matches || [], predictions || [], "#participant-history");
+}
+
+function renderParticipantHistory(matches, predictions, selector) {
+  const root = $(selector);
+  if (!root) return;
+  const byMatch = new Map(predictions.map((item) => [item.match_id, item.pick]));
+  const rows = matches
+    .filter((match) => byMatch.has(match.id) || match.status === "completed")
+    .map((match) => {
+      const pick = byMatch.get(match.id);
+      const result = outcomeFor(match);
+      const point = result && pick === result ? 1 : 0;
+      return `
+        <div class="history-row">
+          <strong>${displayTeam(match.home_team)} x ${displayTeam(match.away_team)}</strong>
+          <span>${phaseFor(match)} · ${match.stage || ""} · ${fmtDate(match.kickoff_at)}</span>
+          <span>Palpite: ${pick ? pickLabel(match, pick) : "Sem palpite"}</span>
+          <span>Resultado: ${result ? pickLabel(match, result) : "Pendente"}</span>
+          <b>${result ? `${point} pt` : "-"}</b>
+        </div>
+      `;
+    });
+  root.innerHTML = rows.length ? rows.join("") : `<p class="muted">Nenhum palpite salvo ainda.</p>`;
+}
+
 async function renderParticipants() {
   const root = $("#participants-list");
   if (!root) return;
@@ -640,25 +745,36 @@ async function renderParticipants() {
     const userPredictions = (predictions || []).filter((prediction) => prediction.participant_id === participant.id);
     const points = userPredictions.filter((prediction) => finished.get(prediction.match_id) === prediction.pick).length;
     return `
-      <div class="participant-row">
+      <a class="participant-row" href="${participantUrl(participant.id)}">
         <strong>${participant.name}</strong>
         <span>${participant.email}</span>
         <b>${points} pts</b>
         <small>${userPredictions.length} palpites</small>
-      </div>
+      </a>
     `;
   }).join("");
 }
 
 async function renderAdminMatches() {
-  const { data: matches, error } = await client.from("matches").select("*").order("match_no", { ascending: true });
+  const [{ data: matches, error }, { data: predictions }, { data: participants }] = await Promise.all([
+    client.from("matches").select("*").order("match_no", { ascending: true }),
+    client.from("predictions").select("participant_id,match_id,pick"),
+    client.from("participants").select("id,name"),
+  ]);
   const root = $("#admin-matches");
   if (error) {
     root.innerHTML = `<p class="message error">${friendlyDbError(error)}</p>`;
     return;
   }
 
-  root.innerHTML = (matches || []).map((match) => `
+  const names = new Map((participants || []).map((participant) => [participant.id, participant.name]));
+  root.innerHTML = (matches || []).map((match) => {
+    const matchPredictions = (predictions || []).filter((prediction) => prediction.match_id === match.id);
+    const votes = ["HOME", "DRAW", "AWAY"].map((pick) => {
+      const voters = matchPredictions.filter((prediction) => prediction.pick === pick).map((prediction) => names.get(prediction.participant_id)).filter(Boolean);
+      return { pick, voters };
+    });
+    return `
     <form class="admin-row" data-match-id="${match.id}">
       <div>
         <strong>Jogo ${match.match_no || ""}</strong>
@@ -675,8 +791,17 @@ async function renderAdminMatches() {
         </select>
       </label>
       <button class="primary" type="submit">Salvar</button>
+      <div class="vote-summary">
+        ${votes.map((vote) => `
+          <div>
+            <strong>${pickLabel(match, vote.pick)} · ${vote.voters.length}</strong>
+            <span>${vote.voters.length ? vote.voters.join(", ") : "Sem votos"}</span>
+          </div>
+        `).join("")}
+      </div>
     </form>
-  `).join("");
+  `;
+  }).join("");
 
   root.querySelectorAll("form").forEach((form) => {
     form.addEventListener("submit", async (event) => {
@@ -741,7 +866,9 @@ async function importCsv() {
 
 if (page === "app" && document.body.dataset.page !== "app") mountAppShell();
 if (page === "admin" && document.body.dataset.page !== "admin") mountAdminShell();
+if (page === "participant" && document.body.dataset.page !== "participant") mountParticipantShell();
 
 if (page === "auth") initAuth();
 if (page === "app") loadApp();
 if (page === "admin") loadAdmin();
+if (page === "participant") loadParticipantPage();
