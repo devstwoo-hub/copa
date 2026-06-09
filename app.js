@@ -1,40 +1,40 @@
 const SUPABASE_URL = "https://zlqsmhlutktkeggqnaox.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpscXNtaGx1dGt0a2VnZ3FuYW94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDEyNTQsImV4cCI6MjA5NjU3NzI1NH0.T2Wnrp3tZvZaUDaETYLslidWb2i3leaa-Ioj8SJXg-c";
+const ADMIN_CODE = "admin2026";
 
 const page = document.body.dataset.page;
 const configured = SUPABASE_URL.startsWith("http") && SUPABASE_ANON_KEY.length > 30;
 const client = configured ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+const sessionKey = "bolao_participant";
 
 const $ = (selector) => document.querySelector(selector);
 
-function setMessage(selector, text) {
+function setMessage(selector, text, type = "") {
   const el = $(selector);
-  if (!el) return;
-  el.classList.remove("error", "success");
-  el.textContent = text || "";
-}
-
-function setAuthMessage(text, type = "") {
-  const el = $("#auth-message");
   if (!el) return;
   el.classList.remove("error", "success");
   if (type) el.classList.add(type);
   el.textContent = text || "";
 }
 
-function authErrorMessage(error) {
-  const message = error?.message || "Erro desconhecido.";
-  const lower = message.toLowerCase();
-  if (lower.includes("email not confirmed")) {
-    return "O Supabase ainda esta exigindo confirmacao de e-mail. Desative Confirm email nas configuracoes de Auth.";
+function normalizeEmail(email) {
+  return String(email || "").trim().toLowerCase();
+}
+
+function saveParticipant(participant) {
+  localStorage.setItem(sessionKey, JSON.stringify(participant));
+}
+
+function readParticipant() {
+  try {
+    return JSON.parse(localStorage.getItem(sessionKey) || "null");
+  } catch {
+    return null;
   }
-  if (lower.includes("invalid login credentials")) {
-    return "E-mail ou senha incorretos. Se voce acabou de cadastrar, verifique se a confirmacao de e-mail esta ativa no Supabase.";
-  }
-  if (lower.includes("user already registered")) {
-    return "Este e-mail ja esta cadastrado. Tente entrar com ele.";
-  }
-  return message;
+}
+
+function clearParticipant() {
+  localStorage.removeItem(sessionKey);
 }
 
 function fmtDate(value) {
@@ -58,53 +58,53 @@ function pickLabel(match, pick) {
   return "Empate";
 }
 
-async function requireUser() {
+function initSignout() {
+  const button = $("#signout");
+  if (!button) return;
+  button.addEventListener("click", () => {
+    clearParticipant();
+    location.href = "./index.html";
+  });
+}
+
+async function requireParticipant() {
   if (!configured) {
     document.body.innerHTML = `<main class="auth-shell"><section class="auth-panel"><h1>Configurar Supabase</h1><p>Edite <strong>app.js</strong> e coloque SUPABASE_URL e SUPABASE_ANON_KEY.</p></section></main>`;
     return null;
   }
-  const { data } = await client.auth.getUser();
-  if (!data.user) {
+
+  const saved = readParticipant();
+  if (!saved?.id) {
     location.href = "./index.html";
     return null;
   }
-  await ensureProfile(data.user);
-  return data.user;
-}
 
-async function ensureProfile(user) {
-  const name = user.user_metadata?.name || user.email?.split("@")[0] || "Participante";
-  const { error } = await client.from("profiles").upsert({
-    id: user.id,
-    name,
-    email: user.email,
-  }, { onConflict: "id", ignoreDuplicates: true });
-  if (error) console.warn("Nao foi possivel garantir o perfil:", error.message);
-}
+  const { data, error } = await client
+    .from("participants")
+    .select("*")
+    .eq("id", saved.id)
+    .single();
 
-async function getProfile(userId) {
-  const { data } = await client.from("profiles").select("*").eq("id", userId).single();
-  return data;
-}
-
-function initSignout() {
-  const button = $("#signout");
-  if (!button) return;
-  button.addEventListener("click", async () => {
-    await client.auth.signOut();
+  if (error || !data) {
+    clearParticipant();
     location.href = "./index.html";
-  });
+    return null;
+  }
+
+  saveParticipant(data);
+  return data;
 }
 
 function initAuth() {
   if (!configured) {
-    setAuthMessage("Edite app.js e configure sua URL e anon key do Supabase.", "error");
+    setMessage("#auth-message", "Edite app.js e configure sua URL e anon key do Supabase.", "error");
     return;
   }
 
-  client.auth.getUser().then(({ data }) => {
-    if (data.user) location.href = "./app.html";
-  });
+  if (readParticipant()?.id) {
+    location.href = "./app.html";
+    return;
+  }
 
   document.querySelectorAll("[data-auth-tab]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -112,69 +112,84 @@ function initAuth() {
       document.querySelectorAll("[data-auth-tab]").forEach((item) => item.classList.toggle("active", item === button));
       $("#login-form").classList.toggle("hidden", tab !== "login");
       $("#signup-form").classList.toggle("hidden", tab !== "signup");
-      setAuthMessage("");
+      setMessage("#auth-message", "");
     });
   });
 
   $("#login-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    setAuthMessage("Entrando...");
-    const { error } = await client.auth.signInWithPassword({
-      email: form.get("email"),
-      password: form.get("password"),
-    });
+    const email = normalizeEmail(form.get("email"));
+    setMessage("#auth-message", "Entrando...");
+
+    const { data, error } = await client
+      .from("participants")
+      .select("*")
+      .eq("email", email)
+      .maybeSingle();
+
     if (error) {
-      const translated = authErrorMessage(error);
-      setAuthMessage(`Nao consegui entrar: ${translated}`, "error");
+      setMessage("#auth-message", `Erro ao entrar: ${error.message}`, "error");
       return;
     }
+
+    if (!data) {
+      setMessage("#auth-message", "E-mail nao cadastrado. Use a aba Cadastro primeiro.", "error");
+      return;
+    }
+
+    saveParticipant(data);
     location.href = "./app.html";
   });
 
   $("#signup-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const name = form.get("name").toString().trim();
-    const email = form.get("email").toString().trim();
-    setAuthMessage("Criando cadastro...");
-    const { data, error } = await client.auth.signUp({
-      email,
-      password: form.get("password"),
-      options: {
-        data: { name },
-      },
-    });
+    const name = String(form.get("name") || "").trim();
+    const email = normalizeEmail(form.get("email"));
+
+    if (!name || !email) {
+      setMessage("#auth-message", "Preencha nome e e-mail.", "error");
+      return;
+    }
+
+    setMessage("#auth-message", "Criando cadastro...");
+    const { data, error } = await client
+      .from("participants")
+      .upsert({ name, email }, { onConflict: "email" })
+      .select()
+      .single();
+
     if (error) {
-      setAuthMessage(authErrorMessage(error), "error");
+      setMessage("#auth-message", `Erro ao cadastrar: ${error.message}`, "error");
       return;
     }
-    if (data.session) {
-      await ensureProfile(data.user);
-      location.href = "./app.html";
-      return;
-    }
-    $("#login-email").value = email;
-    setAuthMessage("Cadastro criado, mas o Supabase nao retornou sessao. Desative Confirm email para entrar direto.", "error");
+
+    saveParticipant(data);
+    location.href = "./app.html";
   });
 }
 
 async function loadApp() {
-  const user = await requireUser();
-  if (!user) return;
+  const participant = await requireParticipant();
+  if (!participant) return;
   initSignout();
 
-  const profile = await getProfile(user.id);
-  $("#user-name").textContent = profile?.name || user.email;
-  if (profile?.role === "admin") $("#admin-link").classList.remove("hidden");
+  $("#user-name").textContent = participant.name;
+  if (participant.is_admin) $("#admin-link").classList.remove("hidden");
 
-  const [{ data: matches }, { data: predictions }] = await Promise.all([
+  const [{ data: matches, error: matchError }, { data: predictions, error: predictionError }] = await Promise.all([
     client.from("matches").select("*").order("kickoff_at", { ascending: true }).order("match_no", { ascending: true }),
-    client.from("predictions").select("*").eq("user_id", user.id),
+    client.from("predictions").select("*").eq("participant_id", participant.id),
   ]);
 
+  if (matchError || predictionError) {
+    $("#matches").innerHTML = `<p class="message error">${matchError?.message || predictionError?.message}</p>`;
+    return;
+  }
+
   renderStageFilter(matches || []);
-  renderMatches(matches || [], predictions || [], user.id);
+  renderMatches(matches || [], predictions || [], participant.id);
   await renderRanking();
 }
 
@@ -194,7 +209,7 @@ function renderStageFilter(matches) {
   });
 }
 
-function renderMatches(matches, predictions, userId) {
+function renderMatches(matches, predictions, participantId) {
   const root = $("#matches");
   const byMatch = new Map(predictions.map((item) => [item.match_id, item.pick]));
   root.innerHTML = "";
@@ -231,13 +246,20 @@ function renderMatches(matches, predictions, userId) {
     `;
     card.querySelectorAll("[data-pick]").forEach((button) => {
       button.addEventListener("click", async () => {
-        await client.from("predictions").upsert({
-          user_id: userId,
+        const { error } = await client.from("predictions").upsert({
+          participant_id: participantId,
           match_id: match.id,
           pick: button.dataset.pick,
-        }, { onConflict: "user_id,match_id" });
+        }, { onConflict: "participant_id,match_id" });
+
+        if (error) {
+          alert(`Nao consegui salvar o palpite: ${error.message}`);
+          return;
+        }
+
         card.querySelectorAll(".pick").forEach((item) => item.classList.remove("selected"));
         button.classList.add("selected");
+        await renderRanking();
       });
     });
     root.appendChild(card);
@@ -245,16 +267,16 @@ function renderMatches(matches, predictions, userId) {
 }
 
 async function renderRanking() {
-  const [{ data: profiles }, { data: predictions }, { data: matches }] = await Promise.all([
-    client.from("profiles").select("id,name"),
-    client.from("predictions").select("user_id,match_id,pick"),
+  const [{ data: participants }, { data: predictions }, { data: matches }] = await Promise.all([
+    client.from("participants").select("id,name"),
+    client.from("predictions").select("participant_id,match_id,pick"),
     client.from("matches").select("id,home_score,away_score,status"),
   ]);
 
   const finished = new Map((matches || []).filter((match) => match.status === "completed").map((match) => [match.id, outcomeFor(match)]));
-  const rows = (profiles || []).map((profile) => {
-    const score = (predictions || []).filter((prediction) => prediction.user_id === profile.id && finished.get(prediction.match_id) === prediction.pick).length;
-    return { ...profile, score };
+  const rows = (participants || []).map((participant) => {
+    const score = (predictions || []).filter((prediction) => prediction.participant_id === participant.id && finished.get(prediction.match_id) === prediction.pick).length;
+    return { ...participant, score };
   }).sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
 
   $("#ranking").innerHTML = rows.map((row, index) => `
@@ -267,12 +289,17 @@ async function renderRanking() {
 }
 
 async function loadAdmin() {
-  const user = await requireUser();
-  if (!user) return;
+  const participant = await requireParticipant();
+  if (!participant) return;
   initSignout();
 
-  const profile = await getProfile(user.id);
-  if (profile?.role !== "admin") {
+  let isAdmin = Boolean(participant.is_admin);
+  if (!isAdmin) {
+    const code = window.prompt("Codigo de admin");
+    isAdmin = code === ADMIN_CODE;
+  }
+
+  if (!isAdmin) {
     document.querySelector("main").innerHTML = `<section class="panel"><h1>Acesso restrito</h1><p>Seu usuario ainda nao esta marcado como admin.</p></section>`;
     return;
   }
@@ -282,8 +309,13 @@ async function loadAdmin() {
 }
 
 async function renderAdminMatches() {
-  const { data: matches } = await client.from("matches").select("*").order("kickoff_at", { ascending: true }).order("match_no", { ascending: true });
+  const { data: matches, error } = await client.from("matches").select("*").order("kickoff_at", { ascending: true }).order("match_no", { ascending: true });
   const root = $("#admin-matches");
+  if (error) {
+    root.innerHTML = `<p class="message error">${error.message}</p>`;
+    return;
+  }
+
   root.innerHTML = (matches || []).map((match) => `
     <form class="admin-row" data-match-id="${match.id}">
       <div>
@@ -302,12 +334,14 @@ async function renderAdminMatches() {
       const data = new FormData(form);
       const homeScore = data.get("home_score") === "" ? null : Number(data.get("home_score"));
       const awayScore = data.get("away_score") === "" ? null : Number(data.get("away_score"));
-      await client.from("matches").update({
+      const { error } = await client.from("matches").update({
         home_score: homeScore,
         away_score: awayScore,
         status: homeScore === null || awayScore === null ? "scheduled" : "completed",
       }).eq("id", form.dataset.matchId);
-      setMessage("#admin-message", "Resultado salvo.");
+
+      setMessage("#admin-message", error ? error.message : "Resultado salvo.", error ? "error" : "success");
+      if (!error) await renderRanking();
     });
   });
 }
@@ -342,10 +376,10 @@ async function importCsv() {
   }));
   const { error } = await client.from("matches").upsert(records, { onConflict: "match_no" });
   if (error) {
-    setMessage("#admin-message", error.message);
+    setMessage("#admin-message", error.message, "error");
     return;
   }
-  setMessage("#admin-message", `${records.length} jogos importados.`);
+  setMessage("#admin-message", `${records.length} jogos importados.`, "success");
   await renderAdminMatches();
 }
 
