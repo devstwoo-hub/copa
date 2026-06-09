@@ -153,7 +153,7 @@ async function requireParticipant() {
 
   const saved = readParticipant();
   if (!saved?.id) {
-    location.href = "./index.html";
+    document.querySelector("main").innerHTML = `<section class="panel"><h1>Entre primeiro</h1><p>Faca login com seu e-mail para acessar esta area.</p><a class="primary inline-action" href="./index.html">Ir para login</a></section>`;
     return null;
   }
 
@@ -165,7 +165,7 @@ async function requireParticipant() {
 
   if (error || !data) {
     clearParticipant();
-    location.href = "./index.html";
+    document.querySelector("main").innerHTML = `<section class="panel"><h1>Sessao expirada</h1><p>Entre novamente para atualizar seu acesso.</p><a class="primary inline-action" href="./index.html">Ir para login</a></section>`;
     return null;
   }
 
@@ -176,11 +176,6 @@ async function requireParticipant() {
 function initAuth() {
   if (!configured) {
     setMessage("#auth-message", "Edite app.js e configure sua URL e anon key do Supabase.", "error");
-    return;
-  }
-
-  if (readParticipant()?.id) {
-    location.href = "./app.html";
     return;
   }
 

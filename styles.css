@@ -150,6 +150,14 @@ textarea {
   cursor: pointer;
 }
 
+.inline-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  text-decoration: none;
+}
+
 .message {
   min-height: 22px;
   color: var(--muted);
