@@ -117,6 +117,7 @@ function mountAppShell() {
         <section class="panel">
           <h2>Meu histórico</h2>
           <div id="history" class="history"></div>
+          <button id="open-history" class="link-button block-action" type="button">Ver histórico completo</button>
         </section>
       </aside>
     </main>
@@ -437,6 +438,7 @@ async function loadApp() {
   renderMatches(currentMatches, currentPredictions, participant.id);
   renderStageTabs(currentMatches);
   initSavePredictions();
+  initHistoryModal();
   await renderRanking();
   renderHistory(currentMatches, currentPredictions);
 }
@@ -575,6 +577,13 @@ function initSavePredictions() {
   }
 }
 
+function initHistoryModal() {
+  const button = $("#open-history");
+  if (!button || button.dataset.ready) return;
+  button.dataset.ready = "true";
+  button.addEventListener("click", () => showHistoryModal(currentMatches, currentPredictions));
+}
+
 async function saveDraftPredictions() {
   if (!currentParticipant) return;
   const existing = new Set(currentPredictions.map((item) => item.match_id));
@@ -663,7 +672,69 @@ async function showFullRanking() {
 }
 
 function renderHistory(matches, predictions) {
-  renderParticipantHistory(matches, predictions, "#history");
+  const root = $("#history");
+  if (!root) return;
+  const byMatch = new Map(predictions.map((item) => [item.match_id, item.pick]));
+  const rows = historyRows(matches, predictions, "salvos").slice(-2).reverse().map((match) => {
+    const pick = byMatch.get(match.id);
+    const result = outcomeFor(match);
+    const point = result && pick === result ? 1 : 0;
+    return `
+      <div class="history-row">
+        <strong>${displayTeam(match.home_team)} x ${displayTeam(match.away_team)}</strong>
+        <span>Palpite: ${pick ? pickLabel(match, pick) : "Sem palpite"}</span>
+        <span>Resultado: ${result ? pickLabel(match, result) : "Pendente"}</span>
+        <b>${result ? `${point} pt` : "-"}</b>
+      </div>
+    `;
+  });
+  root.innerHTML = rows.length ? rows.join("") : `<p class="muted">Seus palpites salvos aparecem aqui.</p>`;
+}
+
+function showHistoryModal(matches, predictions) {
+  const modal = document.createElement("div");
+  modal.className = "modal-backdrop";
+  modal.innerHTML = `
+    <section class="modal history-modal">
+      <div class="section-head tight">
+        <h2>Histórico completo</h2>
+        <button class="ghost" type="button" data-close-modal>Fechar</button>
+      </div>
+      <div id="modal-history-tabs" class="phase-tabs compact-tabs"></div>
+      <div id="modal-history" class="history large-history"></div>
+    </section>
+  `;
+  document.body.appendChild(modal);
+
+  const tabs = modal.querySelector("#modal-history-tabs");
+  const filters = [
+    ["salvos", "Salvos"],
+    ["acertos", "Acertos"],
+    ["erros", "Erros"],
+    ["pendentes", "Pendentes"],
+  ];
+  const counts = Object.fromEntries(filters.map(([key]) => [key, historyRows(matches, predictions, key).length]));
+  tabs.innerHTML = filters.map(([key, label], index) => `
+    <button class="phase-tab ${index === 0 ? "active" : ""}" type="button" data-modal-history-filter="${key}">
+      <span>${label}</span>
+      <small>${counts[key]}</small>
+    </button>
+  `).join("");
+
+  const renderModalHistory = (filter) => renderParticipantHistory(matches, predictions, "#modal-history", filter);
+  renderModalHistory("salvos");
+
+  tabs.querySelectorAll("[data-modal-history-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      tabs.querySelectorAll(".phase-tab").forEach((item) => item.classList.toggle("active", item === button));
+      renderModalHistory(button.dataset.modalHistoryFilter);
+    });
+  });
+
+  modal.querySelector("[data-close-modal]").addEventListener("click", () => modal.remove());
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) modal.remove();
+  });
 }
 
 async function loadAdmin() {
