@@ -6,6 +6,52 @@ const page = document.body.dataset.page;
 const configured = SUPABASE_URL.startsWith("http") && SUPABASE_ANON_KEY.length > 30;
 const client = configured ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 const sessionKey = "bolao_participant";
+const teamTranslations = {
+  Mexico: "México",
+  "South Africa": "África do Sul",
+  "South Korea": "Coreia do Sul",
+  Czechia: "Tchéquia",
+  Canada: "Canadá",
+  "Bosnia and Herzegovina": "Bósnia e Herzegovina",
+  Qatar: "Catar",
+  Switzerland: "Suíça",
+  Brazil: "Brasil",
+  Morocco: "Marrocos",
+  Scotland: "Escócia",
+  "United States": "Estados Unidos",
+  Paraguay: "Paraguai",
+  Australia: "Austrália",
+  Turkiye: "Turquia",
+  "Ivory Coast": "Costa do Marfim",
+  Ecuador: "Equador",
+  Germany: "Alemanha",
+  Curacao: "Curaçao",
+  Netherlands: "Países Baixos",
+  Japan: "Japão",
+  Sweden: "Suécia",
+  Tunisia: "Tunísia",
+  Iran: "Irã",
+  "New Zealand": "Nova Zelândia",
+  Belgium: "Bélgica",
+  Egypt: "Egito",
+  "Saudi Arabia": "Arábia Saudita",
+  Uruguay: "Uruguai",
+  Spain: "Espanha",
+  "Cape Verde": "Cabo Verde",
+  France: "França",
+  Iraq: "Iraque",
+  Norway: "Noruega",
+  Algeria: "Argélia",
+  Austria: "Áustria",
+  Jordan: "Jordânia",
+  "DR Congo": "RD Congo",
+  Uzbekistan: "Uzbequistão",
+  Colombia: "Colômbia",
+  Ghana: "Gana",
+  Panama: "Panamá",
+  England: "Inglaterra",
+  Croatia: "Croácia",
+};
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -57,17 +103,38 @@ function fmtDate(value) {
 }
 
 function outcomeFor(match) {
-  if (match.home_score === null || match.away_score === null) return null;
-  if (match.home_score > match.away_score) return "HOME";
-  if (match.home_score < match.away_score) return "AWAY";
-  return "DRAW";
+  return match.result_pick || null;
 }
 
 function pickLabel(match, pick) {
-  if (pick === "HOME") return match.home_team || "Mandante";
-  if (pick === "AWAY") return match.away_team || "Visitante";
+  if (pick === "HOME") return displayTeam(match.home_team || "Mandante");
+  if (pick === "AWAY") return displayTeam(match.away_team || "Visitante");
   return "Empate";
 }
+
+function displayTeam(team) {
+  return teamTranslations[team] || String(team || "")
+    .replaceAll("1Âº", "1º")
+    .replaceAll("2Âº", "2º")
+    .replaceAll("3Âº", "3º");
+}
+
+function phaseFor(match) {
+  return match.phase || normalizePhase(match.stage);
+}
+
+function normalizePhase(stage) {
+  const value = String(stage || "").toLowerCase();
+  if (value.includes("grupo")) return "Primeira fase";
+  if (value.includes("16")) return "16 avos";
+  if (value.includes("oitava") || value.includes("8")) return "8 de final";
+  if (value.includes("quarta") || value.includes("4")) return "4 de final";
+  if (value.includes("semi")) return "Semifinal";
+  if (value.includes("final")) return "Final";
+  return "Primeira fase";
+}
+
+const phaseOrder = ["Primeira fase", "16 avos", "8 de final", "4 de final", "Semifinal", "Final"];
 
 function initSignout() {
   const button = $("#signout");
@@ -190,7 +257,7 @@ async function loadApp() {
   if (participant.is_admin) $("#admin-link").classList.remove("hidden");
 
   const [{ data: matches, error: matchError }, { data: predictions, error: predictionError }] = await Promise.all([
-    client.from("matches").select("*").order("kickoff_at", { ascending: true }).order("match_no", { ascending: true }),
+    client.from("matches").select("*").order("match_no", { ascending: true }),
     client.from("predictions").select("*").eq("participant_id", participant.id),
   ]);
 
@@ -202,11 +269,12 @@ async function loadApp() {
   renderStageFilter(matches || []);
   renderMatches(matches || [], predictions || [], participant.id);
   await renderRanking();
+  renderHistory(matches || [], predictions || []);
 }
 
 function renderStageFilter(matches) {
   const filter = $("#stage-filter");
-  const stages = [...new Set(matches.map((match) => match.stage).filter(Boolean))];
+  const stages = [...new Set(matches.map(phaseFor))].sort((a, b) => phaseOrder.indexOf(a) - phaseOrder.indexOf(b));
   stages.forEach((stage) => {
     const option = document.createElement("option");
     option.value = stage;
@@ -230,12 +298,28 @@ function renderMatches(matches, predictions, participantId) {
     return;
   }
 
+  const grouped = new Map();
   matches.forEach((match) => {
+    const phase = phaseFor(match);
+    if (!grouped.has(phase)) grouped.set(phase, []);
+    grouped.get(phase).push(match);
+  });
+
+  [...grouped.entries()]
+    .sort(([a], [b]) => phaseOrder.indexOf(a) - phaseOrder.indexOf(b))
+    .forEach(([phase, phaseMatches]) => {
+      const section = document.createElement("section");
+      section.className = "phase-section";
+      section.dataset.stage = phase;
+      section.innerHTML = `<h2>${phase}</h2>`;
+      const list = document.createElement("div");
+      list.className = "matches";
+
+      phaseMatches.forEach((match) => {
     const selected = byMatch.get(match.id);
     const locked = match.status !== "scheduled" || (match.kickoff_at && new Date(match.kickoff_at) <= new Date());
     const card = document.createElement("article");
     card.className = "match-card";
-    card.dataset.stage = match.stage || "";
     card.innerHTML = `
       <div class="match-meta">
         <span>${match.stage || "Copa"}</span>
@@ -243,9 +327,9 @@ function renderMatches(matches, predictions, participantId) {
         <span>${match.venue || ""}</span>
       </div>
       <div class="teams">
-        <span>${match.home_team || "Mandante"}</span>
+        <span>${displayTeam(match.home_team || "Mandante")}</span>
         <span class="vs">x</span>
-        <span>${match.away_team || "Visitante"}</span>
+        <span>${displayTeam(match.away_team || "Visitante")}</span>
       </div>
       <div class="picks">
         ${["HOME", "DRAW", "AWAY"].map((pick) => `
@@ -273,15 +357,21 @@ function renderMatches(matches, predictions, participantId) {
         await renderRanking();
       });
     });
-    root.appendChild(card);
+        list.appendChild(card);
+      });
+
+      section.appendChild(list);
+      root.appendChild(section);
   });
 }
 
 async function renderRanking() {
+  const root = $("#ranking");
+  if (!root) return;
   const [{ data: participants }, { data: predictions }, { data: matches }] = await Promise.all([
     client.from("participants").select("id,name"),
     client.from("predictions").select("participant_id,match_id,pick"),
-    client.from("matches").select("id,home_score,away_score,status"),
+    client.from("matches").select("id,result_pick,status"),
   ]);
 
   const finished = new Map((matches || []).filter((match) => match.status === "completed").map((match) => [match.id, outcomeFor(match)]));
@@ -290,13 +380,36 @@ async function renderRanking() {
     return { ...participant, score };
   }).sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
 
-  $("#ranking").innerHTML = rows.map((row, index) => `
+  root.innerHTML = rows.map((row, index) => `
     <div class="rank-row">
       <span>${index + 1}</span>
       <strong>${row.name}</strong>
       <span class="score">${row.score} pts</span>
     </div>
   `).join("");
+}
+
+function renderHistory(matches, predictions) {
+  const root = $("#history");
+  if (!root) return;
+  const byMatch = new Map(predictions.map((item) => [item.match_id, item.pick]));
+  const rows = matches
+    .filter((match) => byMatch.has(match.id) || match.status === "completed")
+    .map((match) => {
+      const pick = byMatch.get(match.id);
+      const result = outcomeFor(match);
+      const point = result && pick === result ? 1 : 0;
+          return `
+        <div class="history-row">
+          <strong>${displayTeam(match.home_team)} x ${displayTeam(match.away_team)}</strong>
+          <span>Palpite: ${pick ? pickLabel(match, pick) : "Sem palpite"}</span>
+          <span>Resultado: ${result ? pickLabel(match, result) : "Pendente"}</span>
+          <b>${result ? `${point} pt` : "-"}</b>
+        </div>
+      `;
+    });
+
+  root.innerHTML = rows.length ? rows.join("") : `<p class="muted">Seus palpites salvos aparecem aqui.</p>`;
 }
 
 async function loadAdmin() {
@@ -320,7 +433,7 @@ async function loadAdmin() {
 }
 
 async function renderAdminMatches() {
-  const { data: matches, error } = await client.from("matches").select("*").order("kickoff_at", { ascending: true }).order("match_no", { ascending: true });
+  const { data: matches, error } = await client.from("matches").select("*").order("match_no", { ascending: true });
   const root = $("#admin-matches");
   if (error) {
     root.innerHTML = `<p class="message error">${friendlyDbError(error)}</p>`;
@@ -330,11 +443,19 @@ async function renderAdminMatches() {
   root.innerHTML = (matches || []).map((match) => `
     <form class="admin-row" data-match-id="${match.id}">
       <div>
-        <strong>${match.home_team} x ${match.away_team}</strong>
-        <p class="muted">${match.stage || ""} - ${fmtDate(match.kickoff_at)}</p>
+        <strong>Jogo ${match.match_no || ""}</strong>
+        <p class="muted">${phaseFor(match)} - ${match.stage || ""} - ${fmtDate(match.kickoff_at)}</p>
       </div>
-      <label>Casa<input name="home_score" type="number" min="0" value="${match.home_score ?? ""}"></label>
-      <label>Fora<input name="away_score" type="number" min="0" value="${match.away_score ?? ""}"></label>
+      <label>Time A<input name="home_team" type="text" value="${match.home_team || ""}"></label>
+      <label>Time B<input name="away_team" type="text" value="${match.away_team || ""}"></label>
+      <label>Resultado
+        <select name="result_pick">
+          <option value="">Pendente</option>
+          <option value="HOME" ${match.result_pick === "HOME" ? "selected" : ""}>${displayTeam(match.home_team)}</option>
+          <option value="DRAW" ${match.result_pick === "DRAW" ? "selected" : ""}>Empate</option>
+          <option value="AWAY" ${match.result_pick === "AWAY" ? "selected" : ""}>${displayTeam(match.away_team)}</option>
+        </select>
+      </label>
       <button class="primary" type="submit">Salvar</button>
     </form>
   `).join("");
@@ -343,12 +464,12 @@ async function renderAdminMatches() {
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       const data = new FormData(form);
-      const homeScore = data.get("home_score") === "" ? null : Number(data.get("home_score"));
-      const awayScore = data.get("away_score") === "" ? null : Number(data.get("away_score"));
+      const resultPick = data.get("result_pick") || null;
       const { error } = await client.from("matches").update({
-        home_score: homeScore,
-        away_score: awayScore,
-        status: homeScore === null || awayScore === null ? "scheduled" : "completed",
+        home_team: String(data.get("home_team") || "").trim(),
+        away_team: String(data.get("away_team") || "").trim(),
+        result_pick: resultPick,
+        status: resultPick ? "completed" : "scheduled",
       }).eq("id", form.dataset.matchId);
 
       setMessage("#admin-message", error ? friendlyDbError(error) : "Resultado salvo.", error ? "error" : "success");
@@ -376,15 +497,21 @@ async function importCsv() {
   const text = $("#csv-input").value.trim();
   if (!text) return;
   const rows = text.split(/\r?\n/).filter(Boolean).map(parseCsvLine);
-  const records = rows.map(([match_no, stage, kickoff_at, home_team, away_team, venue]) => ({
+  const records = rows.map((row) => {
+    const hasPhase = row.length >= 7;
+    const [match_no, phase, stage, kickoff_at, home_team, away_team, venue] = hasPhase
+      ? row
+      : [row[0], normalizePhase(row[1]), row[1], row[2], row[3], row[4], row[5]];
+    return {
     match_no: Number(match_no),
+    phase,
     stage,
     kickoff_at,
-    home_team,
-    away_team,
+    home_team: displayTeam(home_team),
+    away_team: displayTeam(away_team),
     venue,
-    status: "scheduled",
-  }));
+    };
+  });
   const { error } = await client.from("matches").upsert(records, { onConflict: "match_no" });
   if (error) {
     setMessage("#admin-message", friendlyDbError(error), "error");

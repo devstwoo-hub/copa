@@ -37,4 +37,21 @@ where email = 'seu-email@exemplo.com';
 
 ## Importar jogos
 
-Entre em `admin.html`, cole o conteudo de `worldcup-2026-seed.csv` no campo de importacao e clique em importar.
+Entre em `admin.html`, cole o conteudo de `worldcup-2026-seed-pt.csv` no campo de importacao e clique em importar.
+
+O CSV usa:
+
+```text
+match_no,phase,stage,kickoff_at,home_team,away_team,venue
+```
+
+O admin nao lanca placar. Ele escolhe o resultado do jogo: time A, empate ou time B.
+
+## Historico
+
+Cada participante ve no proprio perfil:
+
+- jogo;
+- palpite salvo;
+- resultado oficial escolhido pelo admin;
+- ponto ganho naquele jogo.

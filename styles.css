@@ -252,6 +252,21 @@ p {
   gap: 10px;
 }
 
+.phase-section {
+  display: grid;
+  gap: 10px;
+}
+
+.phase-section + .phase-section {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.phase-section h2 {
+  margin-bottom: 0;
+}
+
 .match-card {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -347,12 +362,34 @@ p {
 
 .admin-row {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) 80px 80px 120px;
+  grid-template-columns: minmax(160px, 1fr) minmax(130px, 1fr) minmax(130px, 1fr) 140px 100px;
   gap: 8px;
   align-items: end;
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px;
+}
+
+.history {
+  display: grid;
+  gap: 8px;
+}
+
+.history-row {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 13px;
+}
+
+.history-row span {
+  color: var(--muted);
+}
+
+.history-row b {
+  color: var(--accent);
 }
 
 .muted {
@@ -373,7 +410,7 @@ p {
   }
 
   .admin-row {
-    grid-template-columns: 1fr 72px 72px;
+    grid-template-columns: 1fr;
   }
 
   .admin-row button {

@@ -1,7 +1,5 @@
 create extension if not exists "pgcrypto";
 
-drop table if exists public.predictions;
-
 create table if not exists public.participants (
   id uuid primary key default gen_random_uuid(),
   name text not null,
@@ -13,6 +11,7 @@ create table if not exists public.participants (
 create table if not exists public.matches (
   id uuid primary key default gen_random_uuid(),
   match_no integer unique,
+  phase text not null default 'Primeira fase',
   stage text not null,
   kickoff_at timestamptz,
   home_team text not null,
@@ -20,9 +19,13 @@ create table if not exists public.matches (
   venue text,
   home_score integer,
   away_score integer,
+  result_pick text check (result_pick in ('HOME', 'DRAW', 'AWAY')),
   status text not null default 'scheduled' check (status in ('scheduled', 'completed')),
   created_at timestamptz not null default now()
 );
+
+alter table public.matches add column if not exists phase text not null default 'Primeira fase';
+alter table public.matches add column if not exists result_pick text check (result_pick in ('HOME', 'DRAW', 'AWAY'));
 
 create table if not exists public.predictions (
   id uuid primary key default gen_random_uuid(),
