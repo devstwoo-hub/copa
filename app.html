@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Palpites | Bolao da Copa</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="./app.js"></script>
+</head>
+<body data-page="app">
+  <header class="topbar">
+    <a class="brand compact" href="./app.html">
+      <span class="brand-mark">B</span>
+      <strong>Bolao da Copa</strong>
+    </a>
+    <nav class="nav-actions">
+      <a id="admin-link" class="ghost hidden" href="./admin.html">Admin</a>
+      <button id="signout" class="ghost" type="button">Sair</button>
+    </nav>
+  </header>
+
+  <main class="layout">
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <h1>Meus palpites</h1>
+          <p>Escolha quem vence ou marque empate antes do jogo comecar.</p>
+        </div>
+        <select id="stage-filter" aria-label="Filtrar fase">
+          <option value="all">Todos os jogos</option>
+        </select>
+      </div>
+      <div id="matches" class="matches"></div>
+    </section>
+
+    <aside class="side">
+      <section class="panel">
+        <div class="section-head tight">
+          <h2>Ranking</h2>
+          <span id="user-name" class="pill"></span>
+        </div>
+        <div id="ranking" class="ranking"></div>
+      </section>
+      <section class="panel small-copy">
+        <h2>Regra</h2>
+        <p>Acertou o resultado do jogo, ganha 1 ponto. Errou, 0 ponto. Simples e sem sofrimento.</p>
+      </section>
+    </aside>
+  </main>
+</body>
+</html>

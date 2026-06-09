@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bolao da Copa</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="./app.js"></script>
+</head>
+<body data-page="auth">
+  <main class="auth-shell">
+    <section class="auth-panel">
+      <div class="brand">
+        <span class="brand-mark">B</span>
+        <div>
+          <strong>Bolao da Copa</strong>
+          <small>Palpites simples: vitoria, empate ou derrota.</small>
+        </div>
+      </div>
+
+      <div class="tabs" role="tablist" aria-label="Acesso">
+        <button class="tab active" data-auth-tab="login" type="button">Entrar</button>
+        <button class="tab" data-auth-tab="signup" type="button">Cadastro</button>
+      </div>
+
+      <form id="login-form" class="form-stack">
+        <label>
+          E-mail
+          <input name="email" type="email" autocomplete="email" required>
+        </label>
+        <label>
+          Senha
+          <input name="password" type="password" autocomplete="current-password" required>
+        </label>
+        <button class="primary" type="submit">Entrar</button>
+      </form>
+
+      <form id="signup-form" class="form-stack hidden">
+        <label>
+          Nome
+          <input name="name" type="text" autocomplete="name" required>
+        </label>
+        <label>
+          E-mail
+          <input name="email" type="email" autocomplete="email" required>
+        </label>
+        <label>
+          Senha
+          <input name="password" type="password" autocomplete="new-password" minlength="6" required>
+        </label>
+        <button class="primary" type="submit">Criar cadastro</button>
+      </form>
+
+      <p id="auth-message" class="message" aria-live="polite"></p>
+    </section>
+  </main>
+</body>
+</html>

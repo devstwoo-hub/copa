@@ -1,0 +1,104 @@
+1,Grupo A,2026-06-11T20:00:00Z,Mexico,South Africa,Estadio Azteca
+2,Grupo A,2026-06-12T03:00:00Z,South Korea,Czechia,Estadio Akron
+3,Grupo B,2026-06-12T20:00:00Z,Canada,Bosnia and Herzegovina,BMO Field
+4,Grupo B,2026-06-13T20:00:00Z,Qatar,Switzerland,Levi's Stadium
+5,Grupo C,2026-06-13T23:00:00Z,Brazil,Morocco,Gillette Stadium
+6,Grupo C,2026-06-14T02:00:00Z,Haiti,Scotland,MetLife Stadium
+7,Grupo D,2026-06-13T02:00:00Z,United States,Paraguay,SoFi Stadium
+8,Grupo D,2026-06-14T05:00:00Z,Australia,Turkiye,BC Place
+9,Grupo E,2026-06-14T18:00:00Z,Ivory Coast,Ecuador,Lincoln Financial Field
+10,Grupo E,2026-06-15T00:00:00Z,Germany,Curacao,NRG Stadium
+11,Grupo F,2026-06-14T21:00:00Z,Netherlands,Japan,AT&T Stadium
+12,Grupo F,2026-06-15T03:00:00Z,Sweden,Tunisia,Estadio BBVA
+13,Grupo G,2026-06-16T02:00:00Z,Iran,New Zealand,SoFi Stadium
+14,Grupo G,2026-06-15T20:00:00Z,Belgium,Egypt,Lumen Field
+15,Grupo H,2026-06-15T23:00:00Z,Saudi Arabia,Uruguay,Hard Rock Stadium
+16,Grupo H,2026-06-15T17:00:00Z,Spain,Cape Verde,Mercedes-Benz Stadium
+17,Grupo I,2026-06-16T20:00:00Z,France,Senegal,MetLife Stadium
+18,Grupo I,2026-06-16T23:00:00Z,Iraq,Norway,Gillette Stadium
+19,Grupo J,2026-06-17T02:00:00Z,Argentina,Algeria,Arrowhead Stadium
+20,Grupo J,2026-06-17T05:00:00Z,Austria,Jordan,Levi's Stadium
+21,Grupo K,2026-06-17T18:00:00Z,Portugal,DR Congo,NRG Stadium
+22,Grupo K,2026-06-18T03:00:00Z,Uzbekistan,Colombia,Estadio Azteca
+23,Grupo L,2026-06-18T00:00:00Z,Ghana,Panama,BMO Field
+24,Grupo L,2026-06-17T21:00:00Z,England,Croatia,AT&T Stadium
+25,Grupo A,2026-06-18T17:00:00Z,Czechia,South Africa,Mercedes-Benz Stadium
+26,Grupo A,2026-06-19T02:00:00Z,Mexico,South Korea,Estadio Akron
+27,Grupo B,2026-06-18T20:00:00Z,Switzerland,Bosnia and Herzegovina,SoFi Stadium
+28,Grupo B,2026-06-18T23:00:00Z,Canada,Qatar,BC Place
+29,Grupo C,2026-06-19T23:00:00Z,Scotland,Morocco,Lincoln Financial Field
+30,Grupo C,2026-06-20T02:00:00Z,Brazil,Haiti,Gillette Stadium
+31,Grupo D,2026-06-20T05:00:00Z,Turkiye,Paraguay,Levi's Stadium
+32,Grupo D,2026-06-19T20:00:00Z,United States,Australia,Lumen Field
+33,Grupo E,2026-06-20T21:00:00Z,Germany,Ivory Coast,BMO Field
+34,Grupo E,2026-06-21T01:00:00Z,Ecuador,Curacao,Arrowhead Stadium
+35,Grupo F,2026-06-20T18:00:00Z,Netherlands,Sweden,NRG Stadium
+36,Grupo F,2026-06-21T05:00:00Z,Tunisia,Japan,Estadio BBVA
+37,Grupo G,2026-06-21T20:00:00Z,Belgium,Iran,SoFi Stadium
+38,Grupo G,2026-06-22T02:00:00Z,New Zealand,Egypt,BC Place
+39,Grupo H,2026-06-21T23:00:00Z,Uruguay,Cape Verde,Hard Rock Stadium
+40,Grupo H,2026-06-21T17:00:00Z,Spain,Saudi Arabia,Mercedes-Benz Stadium
+41,Grupo I,2026-06-23T01:00:00Z,Norway,Senegal,MetLife Stadium
+42,Grupo I,2026-06-22T22:00:00Z,France,Iraq,Lincoln Financial Field
+43,Grupo J,2026-06-22T18:00:00Z,Argentina,Austria,AT&T Stadium
+44,Grupo J,2026-06-23T04:00:00Z,Jordan,Algeria,Levi's Stadium
+45,Grupo K,2026-06-23T18:00:00Z,Portugal,Uzbekistan,NRG Stadium
+46,Grupo K,2026-06-24T03:00:00Z,Colombia,DR Congo,Estadio Akron
+47,Grupo L,2026-06-23T21:00:00Z,England,Ghana,Gillette Stadium
+48,Grupo L,2026-06-24T00:00:00Z,Panama,Croatia,BMO Field
+49,Grupo A,2026-06-25T02:00:00Z,Czechia,Mexico,Estadio Azteca
+50,Grupo A,2026-06-25T02:00:00Z,South Africa,South Korea,Estadio BBVA
+51,Grupo B,2026-06-24T20:00:00Z,Switzerland,Canada,BC Place
+52,Grupo B,2026-06-24T20:00:00Z,Bosnia and Herzegovina,Qatar,Lumen Field
+53,Grupo C,2026-06-24T23:00:00Z,Scotland,Brazil,Hard Rock Stadium
+54,Grupo C,2026-06-24T23:00:00Z,Morocco,Haiti,Mercedes-Benz Stadium
+55,Grupo D,2026-06-26T03:00:00Z,Turkiye,United States,SoFi Stadium
+56,Grupo D,2026-06-26T03:00:00Z,Paraguay,Australia,Levi's Stadium
+57,Grupo E,2026-06-25T21:00:00Z,Curacao,Ivory Coast,Lincoln Financial Field
+58,Grupo E,2026-06-25T21:00:00Z,Ecuador,Germany,MetLife Stadium
+59,Grupo F,2026-06-26T00:00:00Z,Japan,Sweden,AT&T Stadium
+60,Grupo F,2026-06-26T00:00:00Z,Tunisia,Netherlands,Arrowhead Stadium
+61,Grupo G,2026-06-27T04:00:00Z,Egypt,Iran,Lumen Field
+62,Grupo G,2026-06-27T04:00:00Z,New Zealand,Belgium,BC Place
+63,Grupo H,2026-06-27T01:00:00Z,Cape Verde,Saudi Arabia,NRG Stadium
+64,Grupo H,2026-06-27T01:00:00Z,Uruguay,Spain,Estadio Akron
+65,Grupo I,2026-06-26T20:00:00Z,Norway,France,Gillette Stadium
+66,Grupo I,2026-06-26T20:00:00Z,Senegal,Iraq,BMO Field
+67,Grupo J,2026-06-28T03:00:00Z,Algeria,Austria,Arrowhead Stadium
+68,Grupo J,2026-06-28T03:00:00Z,Jordan,Argentina,AT&T Stadium
+69,Grupo K,2026-06-28T00:30:00Z,Colombia,Portugal,Hard Rock Stadium
+70,Grupo K,2026-06-28T00:30:00Z,DR Congo,Uzbekistan,Mercedes-Benz Stadium
+71,Grupo L,2026-06-27T22:00:00Z,Panama,England,MetLife Stadium
+72,Grupo L,2026-06-27T22:00:00Z,Croatia,Ghana,Lincoln Financial Field
+73,32 avos,2026-06-28T20:00:00Z,2º Grupo A,2º Grupo B,SoFi Stadium
+74,32 avos,2026-06-29T20:00:00Z,1º Grupo E,3º Grupo A/B/C/D/F,Gillette Stadium
+75,32 avos,2026-06-29T20:00:00Z,1º Grupo F,2º Grupo C,Estadio BBVA
+76,32 avos,2026-06-29T20:00:00Z,1º Grupo C,2º Grupo F,NRG Stadium
+77,32 avos,2026-06-30T20:00:00Z,1º Grupo I,3º Grupo C/D/F/G/H,MetLife Stadium
+78,32 avos,2026-06-30T20:00:00Z,2º Grupo E,2º Grupo I,AT&T Stadium
+79,32 avos,2026-06-30T20:00:00Z,1º Grupo A,3º Grupo C/E/F/H/I,Estadio Azteca
+80,32 avos,2026-07-01T20:00:00Z,1º Grupo L,3º Grupo E/H/I/J/K,Mercedes-Benz Stadium
+81,32 avos,2026-07-01T20:00:00Z,1º Grupo D,3º Grupo B/E/F/I/J,Levi's Stadium
+82,32 avos,2026-07-01T20:00:00Z,1º Grupo G,3º Grupo A/E/H/I/J,Lumen Field
+83,32 avos,2026-07-02T20:00:00Z,2º Grupo K,2º Grupo L,BMO Field
+84,32 avos,2026-07-02T20:00:00Z,1º Grupo H,2º Grupo J,SoFi Stadium
+85,32 avos,2026-07-02T20:00:00Z,1º Grupo B,3º Grupo E/F/G/I/J,BC Place
+86,32 avos,2026-07-03T20:00:00Z,1º Grupo J,2º Grupo H,Hard Rock Stadium
+87,32 avos,2026-07-03T20:00:00Z,1º Grupo K,3º Grupo D/E/I/J/L,Arrowhead Stadium
+88,32 avos,2026-07-03T20:00:00Z,2º Grupo D,2º Grupo G,AT&T Stadium
+89,Oitavas,2026-07-04T20:00:00Z,Vencedor Jogo 74,Vencedor Jogo 77,Lincoln Financial Field
+90,Oitavas,2026-07-04T20:00:00Z,Vencedor Jogo 73,Vencedor Jogo 75,NRG Stadium
+91,Oitavas,2026-07-05T20:00:00Z,Vencedor Jogo 76,Vencedor Jogo 78,MetLife Stadium
+92,Oitavas,2026-07-05T20:00:00Z,Vencedor Jogo 79,Vencedor Jogo 80,Estadio Azteca
+93,Oitavas,2026-07-06T20:00:00Z,Vencedor Jogo 83,Vencedor Jogo 84,AT&T Stadium
+94,Oitavas,2026-07-06T20:00:00Z,Vencedor Jogo 81,Vencedor Jogo 82,Lumen Field
+95,Oitavas,2026-07-07T20:00:00Z,Vencedor Jogo 86,Vencedor Jogo 88,Mercedes-Benz Stadium
+96,Oitavas,2026-07-07T20:00:00Z,Vencedor Jogo 85,Vencedor Jogo 87,BC Place
+97,Quartas,2026-07-09T20:00:00Z,Vencedor Jogo 89,Vencedor Jogo 90,Gillette Stadium
+98,Quartas,2026-07-10T20:00:00Z,Vencedor Jogo 93,Vencedor Jogo 94,SoFi Stadium
+99,Quartas,2026-07-11T20:00:00Z,Vencedor Jogo 91,Vencedor Jogo 92,Hard Rock Stadium
+100,Quartas,2026-07-11T20:00:00Z,Vencedor Jogo 95,Vencedor Jogo 96,Arrowhead Stadium
+101,Semifinal,2026-07-14T20:00:00Z,Vencedor Jogo 97,Vencedor Jogo 98,AT&T Stadium
+102,Semifinal,2026-07-15T20:00:00Z,Vencedor Jogo 99,Vencedor Jogo 100,Mercedes-Benz Stadium
+103,3º lugar,2026-07-18T20:00:00Z,Perdedor Jogo 101,Perdedor Jogo 102,Hard Rock Stadium
+104,Final,2026-07-19T20:00:00Z,Vencedor Jogo 101,Vencedor Jogo 102,MetLife Stadium

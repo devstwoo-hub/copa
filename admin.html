@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin | Bolao da Copa</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="./app.js"></script>
+</head>
+<body data-page="admin">
+  <header class="topbar">
+    <a class="brand compact" href="./app.html">
+      <span class="brand-mark">B</span>
+      <strong>Bolao da Copa</strong>
+    </a>
+    <nav class="nav-actions">
+      <a class="ghost" href="./app.html">Palpites</a>
+      <button id="signout" class="ghost" type="button">Sair</button>
+    </nav>
+  </header>
+
+  <main class="layout admin-layout">
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <h1>Resultados</h1>
+          <p>Lance placares finais para liberar a pontuacao no ranking.</p>
+        </div>
+      </div>
+      <div id="admin-matches" class="admin-list"></div>
+    </section>
+
+    <aside class="side">
+      <section class="panel">
+        <h2>Importar jogos</h2>
+        <p class="muted">Cole CSV com: match_no,stage,kickoff_at,home_team,away_team,venue.</p>
+        <textarea id="csv-input" rows="10" placeholder="1,Grupo A,2026-06-11T20:00:00Z,Mexico,South Africa,Mexico City Stadium"></textarea>
+        <button id="import-csv" class="primary" type="button">Importar CSV</button>
+        <p id="admin-message" class="message" aria-live="polite"></p>
+      </section>
+    </aside>
+  </main>
+</body>
+</html>
