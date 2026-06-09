@@ -90,7 +90,7 @@ function mountAppShell() {
             <h1>Meus palpites</h1>
             <p>Escolha quem vence ou marque empate antes do jogo comecar.</p>
           </div>
-          <button id="save-predictions" class="primary" type="button">Salvar palpites</button>
+          <button id="save-predictions" class="primary save-button" type="button">Salvar palpites</button>
         </div>
         <div id="phase-tabs" class="phase-tabs" aria-label="Filtrar fase"></div>
         <p id="prediction-message" class="message" aria-live="polite"></p>
@@ -525,7 +525,7 @@ function renderMatches(matches, predictions, participantId) {
     const draft = draftPredictions.get(match.id);
     const locked = Boolean(selected) || isBettingClosed(match);
     const card = document.createElement("article");
-    card.className = `match-card ${isBrazilMatch(match) ? "brazil-match" : ""}`;
+    card.className = `match-card ${isBrazilMatch(match) ? "brazil-match" : ""} ${!selected && !locked ? "needs-prediction" : ""}`;
     card.innerHTML = `
       <div class="match-meta">
         <span>${match.stage || "Copa"}</span>
@@ -553,7 +553,9 @@ function renderMatches(matches, predictions, participantId) {
         draftPredictions.set(match.id, button.dataset.pick);
         card.querySelectorAll(".pick").forEach((item) => item.classList.remove("selected"));
         button.classList.add("selected");
-        setMessage("#prediction-message", `${draftPredictions.size} palpite(s) aguardando salvar.`);
+        card.classList.remove("needs-prediction");
+        updateSaveButton();
+        setMessage("#prediction-message", `${draftPredictions.size} palpite(s) aguardando salvar. Clique em salvar para confirmar.`);
       });
     });
         list.appendChild(card);
@@ -569,12 +571,21 @@ function initSavePredictions() {
   if (!button || button.dataset.ready) return;
   button.dataset.ready = "true";
   button.addEventListener("click", saveDraftPredictions);
+  updateSaveButton();
 
   const rankingButton = $("#open-ranking");
   if (rankingButton && !rankingButton.dataset.ready) {
     rankingButton.dataset.ready = "true";
     rankingButton.addEventListener("click", showFullRanking);
   }
+}
+
+function updateSaveButton() {
+  const button = $("#save-predictions");
+  if (!button) return;
+  const count = draftPredictions.size;
+  button.textContent = count ? `Salvar ${count} palpite${count > 1 ? "s" : ""}` : "Salvar palpites";
+  button.classList.toggle("has-draft", count > 0);
 }
 
 function initHistoryModal() {
@@ -608,8 +619,10 @@ async function saveDraftPredictions() {
     return;
   }
 
-  setMessage("#prediction-message", `${records.length} palpite(s) salvo(s).`, "success");
-  setTimeout(() => location.href = pageUrl("app"), 550);
+  draftPredictions.clear();
+  updateSaveButton();
+  setMessage("#prediction-message", `${records.length} palpite(s) salvo(s) com sucesso. Eles nao poderao ser alterados.`, "success");
+  setTimeout(() => location.href = pageUrl("app"), 1200);
 }
 
 async function renderRanking() {
