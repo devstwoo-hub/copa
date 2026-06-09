@@ -55,6 +55,12 @@ const teamTranslations = {
 
 const $ = (selector) => document.querySelector(selector);
 
+function pageUrl(pageName) {
+  const isLocal = location.hostname === "127.0.0.1" || location.hostname === "localhost";
+  if (pageName === "index") return isLocal ? "./index.html" : "/";
+  return isLocal ? `./${pageName}.html` : `/${pageName}`;
+}
+
 function setMessage(selector, text, type = "") {
   const el = $(selector);
   if (!el) return;
@@ -141,7 +147,7 @@ function initSignout() {
   if (!button) return;
   button.addEventListener("click", () => {
     clearParticipant();
-    location.href = "./index.html";
+    location.href = pageUrl("index");
   });
 }
 
@@ -153,7 +159,7 @@ async function requireParticipant() {
 
   const saved = readParticipant();
   if (!saved?.id) {
-    document.querySelector("main").innerHTML = `<section class="panel"><h1>Entre primeiro</h1><p>Faca login com seu e-mail para acessar esta area.</p><a class="primary inline-action" href="./index.html">Ir para login</a></section>`;
+    document.querySelector("main").innerHTML = `<section class="panel"><h1>Entre primeiro</h1><p>Faca login com seu e-mail para acessar esta area.</p><a class="primary inline-action" href="${pageUrl("index")}">Ir para login</a></section>`;
     return null;
   }
 
@@ -165,7 +171,7 @@ async function requireParticipant() {
 
   if (error || !data) {
     clearParticipant();
-    document.querySelector("main").innerHTML = `<section class="panel"><h1>Sessao expirada</h1><p>Entre novamente para atualizar seu acesso.</p><a class="primary inline-action" href="./index.html">Ir para login</a></section>`;
+    document.querySelector("main").innerHTML = `<section class="panel"><h1>Sessao expirada</h1><p>Entre novamente para atualizar seu acesso.</p><a class="primary inline-action" href="${pageUrl("index")}">Ir para login</a></section>`;
     return null;
   }
 
@@ -212,7 +218,7 @@ function initAuth() {
     }
 
     saveParticipant(data);
-    location.href = "./app.html";
+    location.href = pageUrl("app");
   });
 
   $("#signup-form").addEventListener("submit", async (event) => {
@@ -239,7 +245,7 @@ function initAuth() {
     }
 
     saveParticipant(data);
-    location.href = "./app.html";
+    location.href = pageUrl("app");
   });
 }
 
