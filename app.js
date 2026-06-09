@@ -9,7 +9,32 @@ const $ = (selector) => document.querySelector(selector);
 
 function setMessage(selector, text) {
   const el = $(selector);
-  if (el) el.textContent = text || "";
+  if (!el) return;
+  el.classList.remove("error", "success");
+  el.textContent = text || "";
+}
+
+function setAuthMessage(text, type = "") {
+  const el = $("#auth-message");
+  if (!el) return;
+  el.classList.remove("error", "success");
+  if (type) el.classList.add(type);
+  el.textContent = text || "";
+}
+
+function authErrorMessage(error) {
+  const message = error?.message || "Erro desconhecido.";
+  const lower = message.toLowerCase();
+  if (lower.includes("email not confirmed")) {
+    return "O Supabase ainda esta exigindo confirmacao de e-mail. Desative Confirm email nas configuracoes de Auth.";
+  }
+  if (lower.includes("invalid login credentials")) {
+    return "E-mail ou senha incorretos. Se voce acabou de cadastrar, verifique se a confirmacao de e-mail esta ativa no Supabase.";
+  }
+  if (lower.includes("user already registered")) {
+    return "Este e-mail ja esta cadastrado. Tente entrar com ele.";
+  }
+  return message;
 }
 
 function fmtDate(value) {
@@ -49,11 +74,12 @@ async function requireUser() {
 
 async function ensureProfile(user) {
   const name = user.user_metadata?.name || user.email?.split("@")[0] || "Participante";
-  await client.from("profiles").upsert({
+  const { error } = await client.from("profiles").upsert({
     id: user.id,
     name,
     email: user.email,
   }, { onConflict: "id", ignoreDuplicates: true });
+  if (error) console.warn("Nao foi possivel garantir o perfil:", error.message);
 }
 
 async function getProfile(userId) {
@@ -72,7 +98,7 @@ function initSignout() {
 
 function initAuth() {
   if (!configured) {
-    setMessage("#auth-message", "Edite app.js e configure sua URL e anon key do Supabase.");
+    setAuthMessage("Edite app.js e configure sua URL e anon key do Supabase.", "error");
     return;
   }
 
@@ -86,19 +112,21 @@ function initAuth() {
       document.querySelectorAll("[data-auth-tab]").forEach((item) => item.classList.toggle("active", item === button));
       $("#login-form").classList.toggle("hidden", tab !== "login");
       $("#signup-form").classList.toggle("hidden", tab !== "signup");
-      setMessage("#auth-message", "");
+      setAuthMessage("");
     });
   });
 
   $("#login-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    setAuthMessage("Entrando...");
     const { error } = await client.auth.signInWithPassword({
       email: form.get("email"),
       password: form.get("password"),
     });
     if (error) {
-      setMessage("#auth-message", "Nao consegui entrar. Confira e-mail e senha.");
+      const translated = authErrorMessage(error);
+      setAuthMessage(`Nao consegui entrar: ${translated}`, "error");
       return;
     }
     location.href = "./app.html";
@@ -108,17 +136,26 @@ function initAuth() {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const name = form.get("name").toString().trim();
+    const email = form.get("email").toString().trim();
+    setAuthMessage("Criando cadastro...");
     const { data, error } = await client.auth.signUp({
-      email: form.get("email"),
+      email,
       password: form.get("password"),
-      options: { data: { name } },
+      options: {
+        data: { name },
+      },
     });
     if (error) {
-      setMessage("#auth-message", error.message);
+      setAuthMessage(authErrorMessage(error), "error");
       return;
     }
-    if (data.user) await ensureProfile(data.user);
-    setMessage("#auth-message", "Cadastro criado. Se o Supabase pedir confirmacao, confirme seu e-mail antes de entrar.");
+    if (data.session) {
+      await ensureProfile(data.user);
+      location.href = "./app.html";
+      return;
+    }
+    $("#login-email").value = email;
+    setAuthMessage("Cadastro criado, mas o Supabase nao retornou sessao. Desative Confirm email para entrar direto.", "error");
   });
 }
 

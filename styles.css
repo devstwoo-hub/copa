@@ -91,6 +91,15 @@ button, input, select, textarea {
   cursor: pointer;
 }
 
+.link-button {
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  font-weight: 800;
+  padding: 0;
+}
+
 .tab {
   border-radius: 6px;
   min-height: 40px;
@@ -145,6 +154,14 @@ textarea {
   min-height: 22px;
   color: var(--muted);
   margin: 14px 0 0;
+}
+
+.message.error {
+  color: var(--danger);
+}
+
+.message.success {
+  color: var(--accent);
 }
 
 .topbar {
