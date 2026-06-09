@@ -237,21 +237,21 @@ function displayTeam(team) {
 }
 
 function phaseFor(match) {
-  return match.phase || normalizePhase(match.stage);
+  return normalizePhase(match.phase || match.stage);
 }
 
 function normalizePhase(stage) {
   const value = String(stage || "").toLowerCase();
   if (value.includes("grupo")) return "Primeira fase";
-  if (value.includes("16")) return "16 avos";
-  if (value.includes("oitava") || value.includes("8")) return "8 de final";
-  if (value.includes("quarta") || value.includes("4")) return "4 de final";
+  if (value.includes("32") || value.includes("16")) return "16 avos";
+  if (value.includes("oitava") || value.includes("8")) return "Oitavas";
+  if (value.includes("quarta") || value.includes("quarta") || value.includes("quartas") || value.includes("4")) return "Quartas";
   if (value.includes("semi")) return "Semifinal";
   if (value.includes("final")) return "Final";
   return "Primeira fase";
 }
 
-const phaseOrder = ["Primeira fase", "16 avos", "8 de final", "4 de final", "Semifinal", "Final"];
+const phaseOrder = ["Primeira fase", "16 avos", "Oitavas", "Quartas", "Semifinal", "Final"];
 
 function initSignout() {
   const button = $("#signout");
@@ -383,8 +383,8 @@ async function loadApp() {
   currentMatches = matches || [];
   currentPredictions = predictions || [];
   renderProfile(participant, currentMatches, currentPredictions);
-  renderStageTabs(currentMatches);
   renderMatches(currentMatches, currentPredictions, participant.id);
+  renderStageTabs(currentMatches);
   initSavePredictions();
   await renderRanking();
   renderHistory(currentMatches, currentPredictions);
@@ -409,22 +409,34 @@ function renderProfile(participant, matches, predictions) {
 function renderStageTabs(matches) {
   const root = $("#phase-tabs");
   if (!root) return;
-  const stages = ["Todos", ...new Set(matches.map(phaseFor))].sort((a, b) => {
-    if (a === "Todos") return -1;
-    if (b === "Todos") return 1;
-    return phaseOrder.indexOf(a) - phaseOrder.indexOf(b);
-  });
-  root.innerHTML = stages.map((stage, index) => `
-    <button class="phase-tab ${index === 0 ? "active" : ""}" type="button" data-phase="${stage}">${stage}</button>
+  const counts = matches.reduce((acc, match) => {
+    const phase = phaseFor(match);
+    acc.set(phase, (acc.get(phase) || 0) + 1);
+    return acc;
+  }, new Map());
+  const stages = phaseOrder.filter((phase) => counts.has(phase));
+  const activePhase = stages[0] || "Primeira fase";
+
+  root.innerHTML = stages.map((stage) => `
+    <button class="phase-tab ${stage === activePhase ? "active" : ""}" type="button" data-phase="${stage}">
+      <span>${stage}</span>
+      <small>${counts.get(stage)}</small>
+    </button>
   `).join("");
+
+  filterPhase(activePhase);
+
   root.querySelectorAll("[data-phase]").forEach((button) => {
     button.addEventListener("click", () => {
       root.querySelectorAll(".phase-tab").forEach((item) => item.classList.toggle("active", item === button));
-      const phase = button.dataset.phase;
-    document.querySelectorAll("[data-stage]").forEach((card) => {
-        card.classList.toggle("hidden", phase !== "Todos" && card.dataset.stage !== phase);
+      filterPhase(button.dataset.phase);
     });
-    });
+  });
+}
+
+function filterPhase(phase) {
+  document.querySelectorAll("[data-stage]").forEach((section) => {
+    section.classList.toggle("hidden", section.dataset.stage !== phase);
   });
 }
 
@@ -451,7 +463,7 @@ function renderMatches(matches, predictions, participantId) {
       const section = document.createElement("section");
       section.className = "phase-section";
       section.dataset.stage = phase;
-      section.innerHTML = `<h2>${phase}</h2>`;
+      section.innerHTML = `<div class="phase-title"><h2>${phase}</h2><span>${phaseMatches.length} jogos</span></div>`;
       const list = document.createElement("div");
       list.className = "matches";
 
@@ -465,14 +477,14 @@ function renderMatches(matches, predictions, participantId) {
       <div class="match-meta">
         <span>${match.stage || "Copa"}</span>
         <span>${fmtDate(match.kickoff_at)}</span>
-        <span>Fecha: ${cutoffLabel(match)}</span>
-        <span>${match.venue || ""}</span>
+        <span>fecha ${cutoffLabel(match)}</span>
       </div>
       <div class="teams">
         <span>${displayTeam(match.home_team || "Mandante")}</span>
         <span class="vs">x</span>
         <span>${displayTeam(match.away_team || "Visitante")}</span>
       </div>
+      ${match.venue ? `<p class="venue">${match.venue}</p>` : ""}
       <div class="picks">
         ${["HOME", "DRAW", "AWAY"].map((pick) => `
           <button class="pick ${(draft || selected) === pick ? "selected" : ""}" type="button" data-pick="${pick}" ${locked ? "disabled" : ""}>

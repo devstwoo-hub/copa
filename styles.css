@@ -279,18 +279,21 @@ p {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .phase-tab {
-  min-height: 36px;
+  min-height: 40px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
   color: var(--ink);
   cursor: pointer;
   font-weight: 800;
-  padding: 8px 12px;
+  padding: 7px 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .phase-tab.active {
@@ -299,20 +302,60 @@ p {
   color: #fff;
 }
 
+.phase-tab small {
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  min-height: 22px;
+  border-radius: 999px;
+  background: #edf2ee;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.phase-tab.active small {
+  background: rgba(255, 255, 255, .18);
+  color: #fff;
+}
+
+.phase-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.phase-title h2 {
+  margin: 0;
+}
+
+.phase-title span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .match-card {
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 14px;
+  padding: 12px;
   background: #fff;
 }
 
 .match-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   color: var(--muted);
-  font-size: 13px;
-  margin-bottom: 10px;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+.match-meta span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 7px;
+  background: #f8faf8;
 }
 
 .teams {
@@ -321,7 +364,7 @@ p {
   align-items: center;
   gap: 10px;
   font-weight: 850;
-  margin-bottom: 12px;
+  margin-bottom: 6px;
 }
 
 .teams span:last-child {
@@ -333,16 +376,23 @@ p {
   font-weight: 700;
 }
 
+.venue {
+  font-size: 13px;
+  margin: 0 0 12px;
+}
+
 .picks {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
+  gap: 7px;
 }
 
 .pick {
   background: #f0f5f2;
   color: var(--ink);
   border: 1px solid var(--line);
+  min-height: 38px;
+  padding: 8px 10px;
 }
 
 .pick.selected {
