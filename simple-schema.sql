@@ -102,3 +102,10 @@ with check (
       and (matches.kickoff_at is null or matches.kickoff_at > now())
   )
 );
+
+grant usage on schema public to anon, authenticated;
+grant select, insert, update on public.participants to anon, authenticated;
+grant select, insert, update, delete on public.matches to anon, authenticated;
+grant select, insert, update, delete on public.predictions to anon, authenticated;
+
+notify pgrst, 'reload schema';

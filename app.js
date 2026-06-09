@@ -17,6 +17,17 @@ function setMessage(selector, text, type = "") {
   el.textContent = text || "";
 }
 
+function friendlyDbError(error) {
+  const message = error?.message || "Erro desconhecido.";
+  if (message.includes("public.participants") || message.includes("schema cache")) {
+    return "A tabela participants ainda nao existe no Supabase. Rode o arquivo simple-schema.sql no SQL Editor e recarregue esta pagina.";
+  }
+  if (message.includes("permission denied")) {
+    return "Sem permissao no Supabase. Rode novamente o simple-schema.sql completo, incluindo os grants no final.";
+  }
+  return message;
+}
+
 function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
 }
@@ -129,7 +140,7 @@ function initAuth() {
       .maybeSingle();
 
     if (error) {
-      setMessage("#auth-message", `Erro ao entrar: ${error.message}`, "error");
+      setMessage("#auth-message", `Erro ao entrar: ${friendlyDbError(error)}`, "error");
       return;
     }
 
@@ -161,7 +172,7 @@ function initAuth() {
       .single();
 
     if (error) {
-      setMessage("#auth-message", `Erro ao cadastrar: ${error.message}`, "error");
+      setMessage("#auth-message", `Erro ao cadastrar: ${friendlyDbError(error)}`, "error");
       return;
     }
 
@@ -184,7 +195,7 @@ async function loadApp() {
   ]);
 
   if (matchError || predictionError) {
-    $("#matches").innerHTML = `<p class="message error">${matchError?.message || predictionError?.message}</p>`;
+    $("#matches").innerHTML = `<p class="message error">${friendlyDbError(matchError || predictionError)}</p>`;
     return;
   }
 
@@ -253,7 +264,7 @@ function renderMatches(matches, predictions, participantId) {
         }, { onConflict: "participant_id,match_id" });
 
         if (error) {
-          alert(`Nao consegui salvar o palpite: ${error.message}`);
+          alert(`Nao consegui salvar o palpite: ${friendlyDbError(error)}`);
           return;
         }
 
@@ -312,7 +323,7 @@ async function renderAdminMatches() {
   const { data: matches, error } = await client.from("matches").select("*").order("kickoff_at", { ascending: true }).order("match_no", { ascending: true });
   const root = $("#admin-matches");
   if (error) {
-    root.innerHTML = `<p class="message error">${error.message}</p>`;
+    root.innerHTML = `<p class="message error">${friendlyDbError(error)}</p>`;
     return;
   }
 
@@ -340,7 +351,7 @@ async function renderAdminMatches() {
         status: homeScore === null || awayScore === null ? "scheduled" : "completed",
       }).eq("id", form.dataset.matchId);
 
-      setMessage("#admin-message", error ? error.message : "Resultado salvo.", error ? "error" : "success");
+      setMessage("#admin-message", error ? friendlyDbError(error) : "Resultado salvo.", error ? "error" : "success");
       if (!error) await renderRanking();
     });
   });
@@ -376,7 +387,7 @@ async function importCsv() {
   }));
   const { error } = await client.from("matches").upsert(records, { onConflict: "match_no" });
   if (error) {
-    setMessage("#admin-message", error.message, "error");
+    setMessage("#admin-message", friendlyDbError(error), "error");
     return;
   }
   setMessage("#admin-message", `${records.length} jogos importados.`, "success");
